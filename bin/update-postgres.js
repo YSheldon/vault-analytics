@@ -7,7 +7,7 @@ var _ = require('underscore')
 var pg = require('pg')
 
 // Connect to postgres
-pg.connect(process.env.PG_URL, function(err, client) {
+pg.connect(process.env.DATABASE_URL, function(err, client) {
   if (err) {
     throw new Error(err)
   }
