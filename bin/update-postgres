@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 var db = require('../dist/mongoc')
 var reporting = require('../dist/retriever')
 var model = require('../dist/model')
