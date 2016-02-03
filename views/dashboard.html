@@ -42,14 +42,18 @@
       <div class="row">
         <div class="col-sm-3 col-md-2 sidebar">
           <ul class="nav nav-sidebar">
-            <li><a href="">Overview <span class="sr-only">(current)</span></a></li>
-            <li><a href="#" id="usage">Usage</a></li>
-            <li><a href="#" id="usageAgg">Usage (Aggregated)</a></li>
-            <li><a href="#" id="versions">Versions</a></li>
+            <li><a href="#overview" id="mnOverview">Overview <span class="sr-only">(current)</span></a></li>
+            <li><a href="#usage" id="mnUsage">Usage</a></li>
+            <li><a href="#usage_agg" id="mnUsageAgg">Usage (Aggregated)</a></li>
+            <li><a href="#versions" id="mvVersions">Versions</a></li>
+            <li><a href="#crashes_agg" id="mnCrashes">Crashes</a></li>
           </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-          <h1 class="page-header">{{name}}</h1>
+          <h1 class="page-header" id="contentTitle">{{name}}</h1>
+
+          <div id="overviewContent" style="display: none;">
+          </div>
 
           <div id="usageContent" style="display: none;">
             <canvas id="usageChart" height="300" width="800"></canvas>
@@ -112,6 +116,7 @@
     <script src="/bootstrap/js/bootstrap.min.js"></script>
     <script src="/bower/Chart.js/Chart.js"></script>
     <script src="/bower/underscore/underscore-min.js"></script>
+    <script src="/bower/grapnel/dist/grapnel.min.js"></script>
     <script src="/local/js/dashboard.js"></script>
 
   </body>

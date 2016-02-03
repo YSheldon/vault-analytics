@@ -50,7 +50,6 @@ exports.setup = (server, client) => {
     path: '/api/1/versions',
     handler: function (request, reply) {
       client.query(DAU_VERSION, [], (err, results) => {
-        console.log(err)
         if (err) {
           reply(err.toString).statusCode(500)
         } else {
