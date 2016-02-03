@@ -15,12 +15,12 @@ var colors = [
 // Build graph styles
 var styles = _.map(colors, function(color) {
   return {
-    fillColor: "rgba(" + color.join(', ') + ", 0.2)",
-    strokeColor: "rgba(" + color.join(', ') + ", 0.5)",
-    pointColor: "rgba(" + color.join(', ') + ", 0.5)",
+    fillColor: "rgba(" + color.join(', ') + ", 0.1)",
+    strokeColor: "rgba(" + color.join(', ') + ", 0.4)",
+    pointColor: "rgba(" + color.join(', ') + ", 0.4)",
     pointStrokeColor: "#fff",
     pointHighlightFill: "#fff",
-    pointHighlightStroke: "rgba(" + color.join(', ') + ", 0.5)"
+    pointHighlightStroke: "rgba(" + color.join(', ') + ", 0.4)"
   }
 })
 
@@ -76,7 +76,7 @@ var buildSuccessHandler = function (x, y, x_label, y_label) {
     }
 
     var ctx = document.getElementById("usageChart").getContext("2d");
-    var myChart = new Chart(ctx).Line(data)
+    var myChart = new Chart(ctx).Line(data, {scaleBeginAtZero: true })
   }
 }
 
