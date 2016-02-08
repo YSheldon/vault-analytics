@@ -92,6 +92,24 @@ var contents = [
   "overviewContent"
 ]
 
+var versionsRetriever = function() {
+  $.ajax('/api/1/versions?days=' + pageState.days, {
+    success: usageVersionHandler
+  })
+}
+
+var DAUPlatformRetriever = function() {
+  $.ajax('/api/1/dau_platform?days=' + pageState.days, {
+    success: usagePlatformHandler
+  })
+}
+
+var DAURetriever = function() {
+  $.ajax('/api/1/dau?days=' + pageState.days, {
+    success: usagePlatformHandler
+  })
+}
+
 // Object of menu item meta data
 var menuItems = {
   "mnOverview": {
@@ -100,15 +118,18 @@ var menuItems = {
   },
   "mnUsage": {
     show: "usageContent",
-    title: "Usage by Platform"
+    title: "Usage by Platform",
+    retriever: DAUPlatformRetriever
   },
   "mnUsageAgg": {
     title: "Usage (Aggregated)",
-    show: "usageContent"
+    show: "usageContent",
+    retriever: DAURetriever
   },
   "mnVersions": {
     title: "Versions",
-    show: "usageContent"
+    show: "usageContent",
+    retriever: versionsRetriever
   },
   "mnCrashes": {
     title: "Crashes",
@@ -118,8 +139,14 @@ var menuItems = {
 
 // Mutable page state
 var pageState = {
-  currentlySelected: null
+  currentlySelected: null,
+  days: 14
 }
+
+$("#daysSelector").on('change', function (evt, value) {
+  pageState.days = parseInt(this.value, 10)
+  refreshData()
+})
 
 // Update page based on current state
 var updatePageUIState = function() {
@@ -141,6 +168,12 @@ var updatePageUIState = function() {
   })
 }
 
+var refreshData = function() {
+  if (menuItems[pageState.currentlySelected]) {
+    menuItems[pageState.currentlySelected].retriever()
+  }
+}
+
 // Setup menu handler routes
 var router = new Grapnel()
 
@@ -152,25 +185,19 @@ router.get('|overview', function(req) {
 router.get('versions', function(req) {
   pageState.currentlySelected = 'mnVersions'
   updatePageUIState()
-  $.ajax('/api/1/versions', {
-    success: usageVersionHandler
-  })
+  refreshData()
 })
 
 router.get('usage', function(req) {
   pageState.currentlySelected = 'mnUsage'
   updatePageUIState()
-  $.ajax('/api/1/dau_platform', {
-    success: usagePlatformHandler
-  })
+  refreshData()
 })
 
 router.get('usage_agg', function(req) {
   pageState.currentlySelected = 'mnUsageAgg'
   updatePageUIState()
-  $.ajax('/api/1/dau', {
-    success: usagePlatformHandler
-  })
+  refreshData()
 })
 
 router.get('crashes_agg', function(req) {

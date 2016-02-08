@@ -1,9 +1,9 @@
 const path = require('path')
 const UUID = require('uuid-js');
 
-var shouldCache = false
+var shouldCache = true
 if (process.env.LOCAL) {
-  shouldCache = true
+  shouldCache = false
 }
 
 // Setup authentication and user interface components

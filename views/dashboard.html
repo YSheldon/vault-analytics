@@ -45,7 +45,7 @@
             <li><a href="#overview" id="mnOverview">Overview <span class="sr-only">(current)</span></a></li>
             <li><a href="#usage" id="mnUsage">Usage</a></li>
             <li><a href="#usage_agg" id="mnUsageAgg">Usage (Aggregated)</a></li>
-            <li><a href="#versions" id="mvVersions">Versions</a></li>
+            <li><a href="#versions" id="mnVersions">Versions</a></li>
             <li><a href="#crashes_agg" id="mnCrashes">Crashes</a></li>
           </ul>
         </div>
@@ -57,6 +57,20 @@
 
           <div id="usageContent" style="display: none;">
             <div>
+              <nav class="navbar navbar-default">
+                <div class="container-fluid">
+                  <form class="navbar-form navbar-left" role="search">
+                    <div class="form-group">
+                      <select class="form-control" id="daysSelector">
+                        <option value="10000">All</option>
+                        <option value="30">30 Days</option>
+                        <option value="14" selected>14 Days</option>
+                        <option value="7">7 Days</option>
+                      </select>
+                    </div>
+                  </form>
+                </div>
+              </nav>
               <canvas id="usageChart" height="300" width="800"></canvas>
               <span id="usageChartLegend" class="line-legend pull-right" height="300" width="150"></span>
             </div>
