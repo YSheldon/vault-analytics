@@ -1,6 +1,11 @@
 const path = require('path')
 const UUID = require('uuid-js');
 
+var shouldCache = false
+if (process.env.LOCAL) {
+  shouldCache = true
+}
+
 // Setup authentication and user interface components
 exports.setup = (server) => {
   // The ADMIN_PASSWORD environment variable must be set
@@ -23,6 +28,7 @@ exports.setup = (server) => {
       engines: {
         html: require('handlebars')
       },
+      isCached: shouldCache,
       relativeTo: path.join(__dirname, '..'),
       path: './views',
       layoutPath: './views/layout',
