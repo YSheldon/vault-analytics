@@ -24,6 +24,14 @@ GROUP BY ymd, version
 ORDER BY ymd DESC, version
 `
 
+const CRASHES_PLATFORM = `
+SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, platform, SUM(total) AS count
+FROM dw.fc_crashes
+WHERE ymd >= current_date - CAST($1 as INTERVAL)
+GROUP BY ymd, platform
+ORDER BY ymd DESC, platform
+`
+
 const formatPGRow = (row) => {
   if (row.count) {
     row.count = parseInt(row.count, 10)
@@ -105,19 +113,19 @@ exports.setup = (server, client) => {
   // Crash reports
   server.route({
     method: 'GET',
-    path: '/api/1/dc',
+    path: '/api/1/dc_platform',
     handler: function (request, reply) {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
-      reporting.dailyCrashesGrouped(db, (err, rows) => {
+      client.query(CRASHES_PLATFORM, [days], (err, results) => {
         if (err) {
-          reply(err.toString).statusCode(500)
+          console.log(err.toString())
+          reply(err.toString()).statusCode(500)
         } else {
-          rows.forEach((row) => pullOutAttribs(row, '_id'))
-          reply(rows)
+          results.rows.forEach((row) => formatPGRow(row))
+          reply(results.rows)
         }
       })
     }
   })
-
 }

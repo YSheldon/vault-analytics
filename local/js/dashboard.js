@@ -110,6 +110,12 @@ var DAURetriever = function() {
   })
 }
 
+var crashesRetriever = function() {
+  $.ajax('/api/1/dc_platform?days=' + pageState.days, {
+    success: usagePlatformHandler
+  })
+}
+
 // Object of menu item meta data
 var menuItems = {
   "mnOverview": {
@@ -133,7 +139,8 @@ var menuItems = {
   },
   "mnCrashes": {
     title: "Crashes",
-    show: "crashesContent"
+    show: "usageContent",
+    retriever: crashesRetriever
   }
 }
 
@@ -203,5 +210,5 @@ router.get('usage_agg', function(req) {
 router.get('crashes_agg', function(req) {
   pageState.currentlySelected = 'mnCrashes'
   updatePageUIState()
-  // TODO - aggregate crash data and build API
+  refreshData()
 })

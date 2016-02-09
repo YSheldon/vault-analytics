@@ -5,3 +5,11 @@ exports.usageUpserter = function(client, row) {
     })
   }
 }
+
+exports.crashUpserter = function(client, row) {
+  return function (cb) {
+    client.query('INSERT INTO dw.fc_crashes (ymd, platform, version, total) VALUES ($1, $2, $3, $4) ON CONFLICT (ymd, platform, version) DO UPDATE SET total = $4', [row._id.ymd, row._id.platform, row._id.version, row.count], (err, result) => {
+      cb(err)
+    })
+  }
+}
