@@ -60,14 +60,23 @@ var retrieveFabricCSV = function (done) {
   )
 }
 
+var removeAllEntriesForPlatform = function (client, platform, done) {
+  client.query('DELETE FROM dw.fc_usage WHERE platform = $1', [platform], done)
+}
+
 // Read, parse and insert DAU into Postgres
 pgc.setup(function(client) {
   retrieveFabricCSV(function(contents) {
-    csv.import(client, contents, args.platform, args.version, function (err) {
-      if (err) {
-        throw new Error(err.toString())
-      }    
-      client.end()
+    removeAllEntriesForPlatform(client, args.platform, function(deleteError, result) {
+      if (deleteError) {
+        throw new Error(deleteError.toString())
+      }
+      csv.import(client, contents, args.platform, args.version, function (err) {
+        if (err) {
+          throw new Error(err.toString())
+        }
+        client.end()
+      })
     })
   })
 })
