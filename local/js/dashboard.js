@@ -24,6 +24,33 @@ var styles = _.map(colors, function(color) {
   }
 })
 
+// Platform meta data
+var platforms = {
+  osx: {
+    id: 'osx',
+    label: 'OSx',
+    mobile: false
+  },
+  winx64: {
+    id: 'winx64',
+    label: 'Windows',
+    mobile: false
+  },
+  android: {
+    id: 'android',
+    label: 'Android',
+    mobile: true
+  },
+  ios: {
+    id: 'ios',
+    label: 'iOS',
+    mobile: true
+  }
+}
+
+var platformKeys = _.keys(platforms)
+var reversePlatforms = _.object(_.map(platforms, function(platform) { return [platform.label, platform] }))
+
 // Build a handler for a successful API request
 var buildSuccessHandler = function (x, y, x_label, y_label) {
   return function(rows) {
@@ -92,26 +119,40 @@ var contents = [
   "overviewContent"
 ]
 
+var serializePlatformParams = function () {
+  var filterPlatforms = _.filter(platformKeys, function(id) {
+    return pageState.platformFilter[id]
+  })
+  return filterPlatforms.join(',')
+}
+
+var standardParams = function() {
+  return $.param({
+    days: pageState.days,
+    platformFilter: serializePlatformParams()
+  })
+}
+
 var versionsRetriever = function() {
-  $.ajax('/api/1/versions?days=' + pageState.days, {
+  $.ajax('/api/1/versions?' + standardParams(), {
     success: usageVersionHandler
   })
 }
 
 var DAUPlatformRetriever = function() {
-  $.ajax('/api/1/dau_platform?days=' + pageState.days, {
+  $.ajax('/api/1/dau_platform?' + standardParams(), {
     success: usagePlatformHandler
   })
 }
 
 var DAURetriever = function() {
-  $.ajax('/api/1/dau?days=' + pageState.days, {
+  $.ajax('/api/1/dau?' + standardParams(), {
     success: usagePlatformHandler
   })
 }
 
 var crashesRetriever = function() {
-  $.ajax('/api/1/dc_platform?days=' + pageState.days, {
+  $.ajax('/api/1/dc_platform?' + standardParams(), {
     success: usagePlatformHandler
   })
 }
@@ -147,7 +188,13 @@ var menuItems = {
 // Mutable page state
 var pageState = {
   currentlySelected: null,
-  days: 14
+  days: 14,
+  platformFilter: {
+    osx: false,
+    winx64: false,
+    ios: false,
+    android: false
+  }
 }
 
 $("#daysSelector").on('change', function (evt, value) {
@@ -211,4 +258,12 @@ router.get('crashes_agg', function(req) {
   pageState.currentlySelected = 'mnCrashes'
   updatePageUIState()
   refreshData()
+})
+
+// build button handlers
+_.forEach(platformKeys, function(id) {
+  $("#btn-filter-" + id).on('change', function() {
+    pageState.platformFilter[id] = this.checked
+    refreshData()
+  });
 })
