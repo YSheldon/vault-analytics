@@ -1,0 +1,20 @@
+[
+  {
+    "_id": {
+      "ymd": "2016-02-17",
+      "platform": "osx",
+      "version": "0.7.14",
+      "first_time": false
+    },
+    "count": 1
+  },
+  {
+    "_id": {
+      "ymd": "2016-02-17",
+      "platform": "winx64",
+      "version": "0.7.14",
+      "first_time": false
+    },
+    "count": 1
+  }
+]

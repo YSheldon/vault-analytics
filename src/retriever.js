@@ -60,7 +60,7 @@ exports.dailyCrashReportsFullGrouped = (db, cb, ts, days) => {
   })
 }
 
-exports.dailyActiveUsersFullGrouped = (db, cb, ts, days) => {
+exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
   ts = ts || (new Date()).getTime()
   days = days || 7
 
@@ -120,6 +120,7 @@ exports.dailyActiveUsersFullGrouped = (db, cb, ts, days) => {
   ])
 
   query.toArray((err, result) => {
+    result = result.concat(exceptions)
     cb(err, result)
   })
 }
