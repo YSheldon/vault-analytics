@@ -16,6 +16,17 @@ if (fs.existsSync('./data/usage.json')) {
   JSON.parse(fs.readFileSync('./data/usage.json'))
 }
 
+// Also read exceptions from a table and insert / update
+var exceptionsSQL = 'INSERT INTO dw.fc_usage ( ymd, platform, version, first_time, total ) SELECT ymd, platform, version, first_time, total from dw.fc_usage_exceptions ON CONFLICT (ymd, platform, version, first_time ) DO UPDATE SET total = EXCLUDED.total'
+
+var makeExceptionsUpserter = function (client) {
+  return function (cb) {
+    client.query(exceptionsSQL, [], function (err, result) {
+      cb(err)
+    })
+  }
+}
+
 // Connect to postgres
 pg.connect(process.env.DATABASE_URL, function(err, client) {
   if (err) {
@@ -33,6 +44,9 @@ pg.connect(process.env.DATABASE_URL, function(err, client) {
       var funcs = _.map(results, function(row) {
         return model.usageUpserter(client, row)
       })
+
+      // Insert / Update the exceptions
+      funcs.push(makeExceptionsUpserter(client))
 
       // Insert rows
       async.series(funcs, function(err, results) {
