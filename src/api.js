@@ -11,38 +11,53 @@ ORDER BY ymd DESC
 `
 
 const DAU_PLATFORM = `
-SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, platform, SUM(total) AS count
-FROM dw.fc_usage
+SELECT
+  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+  FC.platform,
+  SUM(FC.total) AS count,
+  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd ), 3) * 100 AS daily_percentage
+FROM dw.fc_usage FC
 WHERE
-  ymd >= current_date - CAST($1 as INTERVAL) AND
-  platform = ANY ($2)
-GROUP BY ymd, platform
-ORDER BY ymd DESC, platform
+  FC.ymd >= current_date - CAST($1 as INTERVAL) AND
+  FC.platform = ANY ($2)
+GROUP BY FC.ymd, FC.platform
+ORDER BY FC.ymd DESC, FC.platform
 `
 
 const DAU_VERSION = `
-SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, version, SUM(total) AS count
-FROM dw.fc_usage
+SELECT
+  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+  FC.version,
+  SUM(FC.total) AS count,
+  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd ), 3) * 100 AS daily_percentage
+FROM dw.fc_usage FC
 WHERE
-  ymd >= current_date - CAST($1 as INTERVAL) AND
+  FC.ymd >= current_date - CAST($1 as INTERVAL) AND
   platform = ANY ($2)
-GROUP BY ymd, version
-ORDER BY ymd DESC, version
+GROUP BY FC.ymd, FC.version
+ORDER BY FC.ymd DESC, FC.version
 `
 
 const CRASHES_PLATFORM = `
-SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, platform, SUM(total) AS count
-FROM dw.fc_crashes
+SELECT
+  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+  FC.platform,
+  SUM(FC.total) AS count,
+  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_crashes WHERE ymd = FC.ymd ), 3) * 100 AS daily_percentage
+FROM dw.fc_crashes FC
 WHERE
-  ymd >= current_date - CAST($1 as INTERVAL) AND
-  platform = ANY ($2)
-GROUP BY ymd, platform
-ORDER BY ymd DESC, platform
+  FC.ymd >= current_date - CAST($1 as INTERVAL) AND
+  FC.platform = ANY ($2)
+GROUP BY FC.ymd, FC.platform
+ORDER BY FC.ymd DESC, FC.platform
 `
 
 const formatPGRow = (row) => {
   if (row.count) {
     row.count = parseInt(row.count, 10)
+  }
+  if (row.daily_percentage) {
+    row.daily_percentage = parseFloat(row.daily_percentage)
   }
   return row
 }
@@ -60,7 +75,7 @@ const pullOutAttribs = (obj, k) => {
   return obj
 }
 
-let allPlatforms = ['osx', 'winx64', 'ios', 'android']
+let allPlatforms = ['osx', 'winx64', 'ios', 'android', 'unknown']
 
 let platformPostgresArray = (platformFilter) => {
   let platforms = _.filter((platformFilter || '').split(','), (platform) => platform !== '')

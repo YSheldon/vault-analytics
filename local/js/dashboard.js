@@ -58,7 +58,15 @@ var buildSuccessHandler = function (x, y, x_label, y_label) {
     var table = $('#usageDataTable tbody')
     table.empty()
     rows.forEach(function(row) {
-      table.append('<tr><td>' + row[x] + '</td><td>' + (row[y] || 'All') + '</td><td class="text-right">' + row.count + '</td></tr>')
+      var buf = '<tr>'
+      buf = buf + '<td>' + row[x] + '</td>'
+      buf = buf + '<td>' + (row[y] || 'All') + '</td>'
+      buf = buf + '<td class="text-right">' + row.count + '</td>'
+      if (row.daily_percentage !== undefined) {
+        buf = buf + '<td class="text-right">' + row.daily_percentage + '%</td>'
+      }
+      buf = buf + '</tr>'
+      table.append(buf)
     })
 
     // Build a list of unique labels (ymd)
