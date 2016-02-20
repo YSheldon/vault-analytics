@@ -110,7 +110,12 @@ var buildSuccessHandler = function (x, y, x_label, y_label) {
       })
     }
 
-    var ctx = document.getElementById("usageChart").getContext("2d");
+    var container = $("#usageChartContainer")
+    container.empty()
+    container.append("<canvas id='usageChart' height='300' width='800'></canvas>")
+
+    var usageChart = document.getElementById("usageChart")
+    var ctx = usageChart.getContext("2d")
     var myChart = new Chart(ctx).Line(data, {scaleBeginAtZero: true })
     $("#usageChartLegend").html(myChart.generateLegend())
   }
