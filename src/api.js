@@ -52,6 +52,20 @@ GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
 
+const CRASHES_PLATFORM_VERSION = `
+SELECT
+  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+  FC.platform || ' ' || FC.version as platform,
+  SUM(FC.total) AS count,
+  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_crashes WHERE ymd = FC.ymd ), 3) * 100 AS daily_percentage
+FROM dw.fc_crashes FC
+WHERE
+  FC.ymd >= current_date - CAST($1 as INTERVAL) AND
+  FC.platform = ANY ($2)
+GROUP BY FC.ymd, FC.platform || ' ' || FC.version
+ORDER BY FC.ymd DESC, FC.platform || ' ' || FC.version
+`
+
 const formatPGRow = (row) => {
   if (row.count) {
     row.count = parseInt(row.count, 10)
@@ -163,4 +177,24 @@ exports.setup = (server, client) => {
       })
     }
   })
+
+  // Crash reports by platform / version
+  server.route({
+    method: 'GET',
+    path: '/api/1/dc_platform_version',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10)
+      days += ' days'
+      let platforms = platformPostgresArray(request.query.platformFilter)
+      client.query(CRASHES_PLATFORM_VERSION, [days, platforms], (err, results) => {
+        if (err) {
+          reply(err.toString()).statusCode(500)
+        } else {
+          results.rows.forEach((row) => formatPGRow(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
 }

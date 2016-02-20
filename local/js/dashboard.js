@@ -181,6 +181,12 @@ var crashesRetriever = function() {
   })
 }
 
+var crashesVersionRetriever = function() {
+  $.ajax('/api/1/dc_platform_version?' + standardParams(), {
+    success: usagePlatformHandler
+  })
+}
+
 // Object of menu item meta data
 var menuItems = {
   "mnOverview": {
@@ -203,9 +209,14 @@ var menuItems = {
     retriever: versionsRetriever
   },
   "mnCrashes": {
-    title: "Crashes",
+    title: "Crashes by Platform",
     show: "usageContent",
     retriever: crashesRetriever
+  },
+  "mnCrashesVersion": {
+    title: "Crashes by Platform / Version",
+    show: "usageContent",
+    retriever: crashesVersionRetriever
   }
 }
 
@@ -278,8 +289,14 @@ router.get('usage_agg', function(req) {
   refreshData()
 })
 
-router.get('crashes_agg', function(req) {
+router.get('crashes_platform', function(req) {
   pageState.currentlySelected = 'mnCrashes'
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('crashes_platform_version', function(req) {
+  pageState.currentlySelected = 'mnCrashesVersion'
   updatePageUIState()
   refreshData()
 })
