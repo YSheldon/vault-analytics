@@ -7,7 +7,7 @@ if (!process.env.FABRIC_SESSION) {
   throw new Error("The FABRIC_SESSION environment variable must be set to the contents of the Fabric _fabric_session cookie. Warning! this value is generally valid for two weeks only.")
 }
 
-if (!process.env.FABRIC_ANDROID_PROJECT_ID) {
+if (!(process.env.FABRIC_ANDROID_PROJECT_ID || process.env.FABRIC_IOS_PROJECT_ID)) {
   throw new Error("The FABRIC_ANDROID_PROJECT_ID environment variable must be set.")
 }
 
@@ -21,7 +21,7 @@ var args = require('yargs')
 // Valid platform identifiers
 var platforms = {
   'android': process.env.FABRIC_ANDROID_PROJECT_ID,
-  'ios': process.env.FABRIC_IOS_PROJECT_ID || null
+  'ios': process.env.FABRIC_IOS_PROJECT_ID
 }
 
 if (!platforms[args.platform]) {
