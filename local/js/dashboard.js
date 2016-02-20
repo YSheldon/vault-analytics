@@ -57,8 +57,19 @@ var buildSuccessHandler = function (x, y, x_label, y_label) {
 
     var table = $('#usageDataTable tbody')
     table.empty()
+    var ctrl = rows[x]
+    var ctrlClass = ''
     rows.forEach(function(row) {
-      var buf = '<tr>'
+      if (row[x] !== ctrl) {
+        // The ctrl has broken, we need to change grouping
+        if (ctrlClass === 'active') {
+          ctrlClass = ''
+        } else {
+          ctrlClass = 'active'
+        }
+        ctrl = row[x]
+      }
+      var buf = '<tr class="' + ctrlClass + '">'
       buf = buf + '<td>' + row[x] + '</td>'
       buf = buf + '<td>' + (row[y] || 'All') + '</td>'
       buf = buf + '<td class="text-right">' + row.count + '</td>'
