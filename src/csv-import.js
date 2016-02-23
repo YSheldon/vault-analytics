@@ -4,7 +4,7 @@ const async = require('async')
 const _ = require('underscore')
 
 // Read in the contents of a CSV file, inserting elements into Postgres
-exports.import = (client, contents, platform, version, done) => {
+exports.import = (client, contents, platform, version, channel, done) => {
   // Split the rows and remove blank rows
   var rows = _.filter(contents.split('\n').slice(1), (row) => {
     return row.length
@@ -18,6 +18,7 @@ exports.import = (client, contents, platform, version, done) => {
         ymd: tokens[0],
         platform: platform,
         version: version,
+        channel: channel,
         first_time: false
       },
       count: parseInt(tokens[1], 10)

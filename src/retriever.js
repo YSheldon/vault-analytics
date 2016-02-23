@@ -18,6 +18,9 @@ exports.dailyCrashReportsFullGrouped = (db, cb, ts, days) => {
         platform: {
           $ifNull: [ '$platform', 'unknown' ]
         },
+        channel: {
+          $ifNull: [ '$channel', 'dev' ]
+        },
         version: {
           $ifNull: [ '$_version', '0.0.0' ]
         },
@@ -35,7 +38,8 @@ exports.dailyCrashReportsFullGrouped = (db, cb, ts, days) => {
         _id: {
           ymd: '$ymd',
           platform: '$platform',
-          version: '$version'
+          version: '$version',
+          channel: '$channel'
         },
         count: {
           $sum: 1
@@ -46,7 +50,8 @@ exports.dailyCrashReportsFullGrouped = (db, cb, ts, days) => {
       $sort: {
         '_id.ymd': -1,
         '_id.platform': 1,
-        '_id.version': 1
+        '_id.version': 1,
+        '_id.channel': 1
       }
     }
   ])
@@ -82,6 +87,9 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
         first_time: {
           $ifNull: [ '$first', false ]
         },
+        channel: {
+          $ifNull: [ '$channel', 'dev' ]
+        },
         ymd: {
           $dateToString: {
             format: "%Y-%m-%d", date: {
@@ -102,7 +110,8 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
           ymd: '$ymd',
           platform: '$platform',
           version: '$version',
-          first_time: '$first_time'
+          first_time: '$first_time',
+          channel: '$channel'
         },
         count: {
           $sum: 1
@@ -114,7 +123,8 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
         '_id.ymd': -1,
         '_id.platform': 1,
         '_id.version': 1,
-        '_id.first_time': 1
+        '_id.first_time': 1,
+        '_id.channel': 1
       }
     }
   ])

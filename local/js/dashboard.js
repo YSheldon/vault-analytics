@@ -48,7 +48,25 @@ var platforms = {
   }
 }
 
+// Channel meta data
+var channels = {
+  dev: {
+    id: 'dev',
+    label: 'Development'
+  },
+  beta: {
+    id: 'beta',
+    label: 'Beta'
+  },
+  stable: {
+    id: 'stable',
+    label: 'Stable'
+  }
+}
+
 var platformKeys = _.keys(platforms)
+var channelKeys = _.keys(channels)
+
 var reversePlatforms = _.object(_.map(platforms, function(platform) { return [platform.label, platform] }))
 
 // Build a handler for a successful API request
@@ -150,10 +168,18 @@ var serializePlatformParams = function () {
   return filterPlatforms.join(',')
 }
 
+var serializeChannelParams = function () {
+  var filterChannels = _.filter(channelKeys, function(id) {
+    return pageState.channelFilter[id]
+  })
+  return filterChannels.join(',')
+}
+
 var standardParams = function() {
   return $.param({
     days: pageState.days,
-    platformFilter: serializePlatformParams()
+    platformFilter: serializePlatformParams(),
+    channelFilter: serializeChannelParams()
   })
 }
 
@@ -229,6 +255,11 @@ var pageState = {
     winx64: false,
     ios: false,
     android: false
+  },
+  channelFilter: {
+    dev: false,
+    beta: false,
+    stable: false
   }
 }
 
@@ -301,10 +332,18 @@ router.get('crashes_platform_version', function(req) {
   refreshData()
 })
 
-// build button handlers
+// build platform button handlers
 _.forEach(platformKeys, function(id) {
   $("#btn-filter-" + id).on('change', function() {
     pageState.platformFilter[id] = this.checked
     refreshData()
-  });
+  })
+})
+
+// build channel button handlers
+_.forEach(channelKeys, function(id) {
+  $("#btn-channel-" + id).on('change', function() {
+    pageState.channelFilter[id] = this.checked
+    refreshData()
+  })
 })

@@ -16,6 +16,7 @@ if (!(process.env.FABRIC_ANDROID_PROJECT_ID || process.env.FABRIC_IOS_PROJECT_ID
 // fully automatic.
 var args = require('yargs')
     .demand(['platform', 'version'])
+    .default('channel', 'dev')
     .argv
 
 // Valid platform identifiers
@@ -71,7 +72,7 @@ pgc.setup(function(client) {
       if (deleteError) {
         throw new Error(deleteError.toString())
       }
-      csv.import(client, contents, args.platform, args.version, function (err) {
+      csv.import(client, contents, args.platform, args.version, args.channel, function (err) {
         if (err) {
           throw new Error(err.toString())
         }

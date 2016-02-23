@@ -5,7 +5,8 @@ SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, SUM(total) AS count
 FROM dw.fc_usage
 WHERE
   ymd >= current_date - CAST($1 as INTERVAL) AND
-  platform = ANY ($2)
+  platform = ANY ($2) AND
+  channel = ANY ($3)
 GROUP BY ymd
 ORDER BY ymd DESC
 `
@@ -19,7 +20,8 @@ SELECT
 FROM dw.fc_usage FC
 WHERE
   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
-  FC.platform = ANY ($2)
+  FC.platform = ANY ($2) AND
+  FC.channel = ANY ($3)
 GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
@@ -33,7 +35,8 @@ SELECT
 FROM dw.fc_usage FC
 WHERE
   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
-  platform = ANY ($2)
+  FC.platform = ANY ($2) AND
+  FC.channel = ANY ($3)
 GROUP BY FC.ymd, FC.version
 ORDER BY FC.ymd DESC, FC.version
 `
@@ -47,7 +50,8 @@ SELECT
 FROM dw.fc_crashes FC
 WHERE
   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
-  FC.platform = ANY ($2)
+  FC.platform = ANY ($2) AND
+  FC.channel = ANY ($3)
 GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
@@ -61,7 +65,8 @@ SELECT
 FROM dw.fc_crashes FC
 WHERE
   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
-  FC.platform = ANY ($2)
+  FC.platform = ANY ($2) AND
+  FC.channel = ANY ($3)
 GROUP BY FC.ymd, FC.platform || ' ' || FC.version
 ORDER BY FC.ymd DESC, FC.platform || ' ' || FC.version
 `
@@ -90,6 +95,7 @@ const pullOutAttribs = (obj, k) => {
 }
 
 let allPlatforms = ['osx', 'winx64', 'ios', 'android', 'unknown']
+let allChannels = ['dev', 'beta', 'stable']
 
 let platformPostgresArray = (platformFilter) => {
   let platforms = _.filter((platformFilter || '').split(','), (platform) => platform !== '')
@@ -97,6 +103,15 @@ let platformPostgresArray = (platformFilter) => {
     return allPlatforms
   } else {
     return platforms
+  }
+}
+
+let channelPostgresArray = (channelFilter) => {
+  let channels = _.filter((channelFilter || '').split(','), (channel) => channel !== '')
+  if (!channels.length) {
+    return allChannels
+  } else {
+    return channels
   }
 }
 
@@ -110,7 +125,8 @@ exports.setup = (server, client) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       let platforms = platformPostgresArray(request.query.platformFilter)
-      client.query(DAU_VERSION, [days, platforms], (err, results) => {
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(DAU_VERSION, [days, platforms, channels], (err, results) => {
         if (err) {
           reply(err.toString).statusCode(500)
         } else {
@@ -129,7 +145,8 @@ exports.setup = (server, client) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       let platforms = platformPostgresArray(request.query.platformFilter)
-      client.query(DAU, [days, platforms], (err, results) => {
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(DAU, [days, platforms, channels], (err, results) => {
         if (err) {
           reply(err.toString()).status(500)
         } else {
@@ -148,7 +165,8 @@ exports.setup = (server, client) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       let platforms = platformPostgresArray(request.query.platformFilter)
-      client.query(DAU_PLATFORM, [days, platforms], (err, results) => {
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(DAU_PLATFORM, [days, platforms, channels], (err, results) => {
         if (err) {
           reply(err.toString()).statusCode(500)
         } else {
@@ -167,7 +185,8 @@ exports.setup = (server, client) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       let platforms = platformPostgresArray(request.query.platformFilter)
-      client.query(CRASHES_PLATFORM, [days, platforms], (err, results) => {
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(CRASHES_PLATFORM, [days, platforms, channels], (err, results) => {
         if (err) {
           reply(err.toString()).statusCode(500)
         } else {
@@ -186,7 +205,8 @@ exports.setup = (server, client) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       let platforms = platformPostgresArray(request.query.platformFilter)
-      client.query(CRASHES_PLATFORM_VERSION, [days, platforms], (err, results) => {
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(CRASHES_PLATFORM_VERSION, [days, platforms, channels], (err, results) => {
         if (err) {
           reply(err.toString()).statusCode(500)
         } else {

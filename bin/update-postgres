@@ -17,7 +17,7 @@ if (fs.existsSync('./data/usage.json')) {
 }
 
 // Also read exceptions from a table and insert / update
-var exceptionsSQL = 'INSERT INTO dw.fc_usage ( ymd, platform, version, first_time, total ) SELECT ymd, platform, version, first_time, total from dw.fc_usage_exceptions ON CONFLICT (ymd, platform, version, first_time ) DO UPDATE SET total = EXCLUDED.total'
+var exceptionsSQL = 'INSERT INTO dw.fc_usage ( ymd, platform, version, first_time, channel, total ) SELECT ymd, platform, version, first_time, channel, total from dw.fc_usage_exceptions ON CONFLICT (ymd, platform, version, first_time, channel ) DO UPDATE SET total = EXCLUDED.total'
 
 var makeExceptionsUpserter = function (client) {
   return function (cb) {
