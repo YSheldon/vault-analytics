@@ -16,7 +16,7 @@ SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
   FC.platform,
   SUM(FC.total) AS count,
-  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd ), 3) * 100 AS daily_percentage
+ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd AND platform = ANY ($2) AND channel = ANY ($3)), 3) * 100 AS daily_percentage
 FROM dw.fc_usage FC
 WHERE
   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
@@ -31,7 +31,7 @@ SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
   FC.version,
   SUM(FC.total) AS count,
-  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd ), 3) * 100 AS daily_percentage
+  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd AND platform = ANY ($2) AND channel = ANY ($3) ), 3) * 100 AS daily_percentage
 FROM dw.fc_usage FC
 WHERE
   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
@@ -46,7 +46,7 @@ SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
   FC.platform,
   SUM(FC.total) AS count,
-  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_crashes WHERE ymd = FC.ymd ), 3) * 100 AS daily_percentage
+  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_crashes WHERE ymd = FC.ymd AND platform = ANY ($2) AND channel = ANY ($3) ), 3) * 100 AS daily_percentage
 FROM dw.fc_crashes FC
 WHERE
   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
@@ -61,7 +61,7 @@ SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
   FC.platform || ' ' || FC.version as platform,
   SUM(FC.total) AS count,
-  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_crashes WHERE ymd = FC.ymd ), 3) * 100 AS daily_percentage
+  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_crashes WHERE ymd = FC.ymd AND platform = ANY ($2) AND channel = ANY ($3) ), 3) * 100 AS daily_percentage
 FROM dw.fc_crashes FC
 WHERE
   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
@@ -128,7 +128,7 @@ exports.setup = (server, client) => {
       let channels = channelPostgresArray(request.query.channelFilter)
       client.query(DAU_VERSION, [days, platforms, channels], (err, results) => {
         if (err) {
-          reply(err.toString).statusCode(500)
+          reply(err.toString).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
           reply(results.rows)
@@ -168,7 +168,7 @@ exports.setup = (server, client) => {
       let channels = channelPostgresArray(request.query.channelFilter)
       client.query(DAU_PLATFORM, [days, platforms, channels], (err, results) => {
         if (err) {
-          reply(err.toString()).statusCode(500)
+          reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
           reply(results.rows)
@@ -188,7 +188,7 @@ exports.setup = (server, client) => {
       let channels = channelPostgresArray(request.query.channelFilter)
       client.query(CRASHES_PLATFORM, [days, platforms, channels], (err, results) => {
         if (err) {
-          reply(err.toString()).statusCode(500)
+          reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
           reply(results.rows)
@@ -208,7 +208,7 @@ exports.setup = (server, client) => {
       let channels = channelPostgresArray(request.query.channelFilter)
       client.query(CRASHES_PLATFORM_VERSION, [days, platforms, channels], (err, results) => {
         if (err) {
-          reply(err.toString()).statusCode(500)
+          reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
           reply(results.rows)
