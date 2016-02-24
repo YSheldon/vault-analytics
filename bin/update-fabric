@@ -7,22 +7,22 @@ if (!process.env.FABRIC_SESSION) {
   throw new Error("The FABRIC_SESSION environment variable must be set to the contents of the Fabric _fabric_session cookie. Warning! this value is generally valid for two weeks only.")
 }
 
-if (!(process.env.FABRIC_ANDROID_PROJECT_ID || process.env.FABRIC_IOS_PROJECT_ID)) {
-  throw new Error("The FABRIC_ANDROID_PROJECT_ID environment variable must be set.")
+if (!process.env.CURRENT_VERSION) {
+  throw new Error("The CURRENT_VERSION must be set to the most current version of the laptop-browser. I.e. 0.7.15")
 }
 
 // Note: We are taking the version as a parameter to this script. This will need to be updated everytime we release a new
 // version of the browser. TODO - investigate a way to retrieve the most current version number for this script to be
 // fully automatic.
 var args = require('yargs')
-    .demand(['platform', 'version'])
+    .demand(['platform', 'project_id'])
     .default('channel', 'dev')
     .argv
 
 // Valid platform identifiers
 var platforms = {
-  'android': process.env.FABRIC_ANDROID_PROJECT_ID,
-  'ios': process.env.FABRIC_IOS_PROJECT_ID
+  'android': args.project_id,
+  'ios': args.project_id
 }
 
 if (!platforms[args.platform]) {
@@ -30,14 +30,13 @@ if (!platforms[args.platform]) {
 }
 
 var FABRIC_URL = "https://fabric.io/api/v3/projects/PROJECT_ID/answers_csv/dau_csv?start=START&end=END&build=all"
-var PROJECT_ID = platforms[args.platform]
 
 // Retrieve CSV data from Fabric
 var retrieveFabricCSV = function (done) {
   var end = parseInt((new Date()).getTime() / 1000, 10)
   var start = end - (365 * 24 * 60 * 60)
   var url = FABRIC_URL
-  url = url.replace('PROJECT_ID', PROJECT_ID)
+  url = url.replace('PROJECT_ID', args.project_id)
   url = url.replace('START', start)
   url = url.replace('END', end)
 
@@ -61,6 +60,7 @@ var retrieveFabricCSV = function (done) {
   )
 }
 
+// Remove all record for a platform and channel
 var removeAllEntriesForPlatform = function (client, platform, channel, done) {
   client.query('DELETE FROM dw.fc_usage WHERE platform = $1 AND channel=$2', [platform, channel], done)
 }
@@ -72,7 +72,7 @@ pgc.setup(function(client) {
       if (deleteError) {
         throw new Error(deleteError.toString())
       }
-      csv.import(client, contents, args.platform, args.version, args.channel, function (err) {
+      csv.import(client, contents, args.platform, process.env.CURRENT_VERSION, args.channel, function (err) {
         if (err) {
           throw new Error(err.toString())
         }
