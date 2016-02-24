@@ -257,7 +257,7 @@ var pageState = {
     android: false
   },
   channelFilter: {
-    dev: false,
+    dev: true,
     beta: false,
     stable: false
   }
