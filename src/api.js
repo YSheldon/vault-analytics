@@ -1,4 +1,5 @@
 var _ = require('underscore')
+var dataset = require('./dataset')
 
 const DAU = `
 SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, SUM(total) AS count
@@ -122,8 +123,7 @@ exports.setup = (server, client) => {
     method: 'GET',
     path: '/api/1/versions',
     handler: function (request, reply) {
-      let days = parseInt(request.query.days || 7, 10)
-      days += ' days'
+      let days = parseInt(request.query.days || 7, 10) + ' days'
       let platforms = platformPostgresArray(request.query.platformFilter)
       let channels = channelPostgresArray(request.query.channelFilter)
       client.query(DAU_VERSION, [days, platforms, channels], (err, results) => {
@@ -131,6 +131,8 @@ exports.setup = (server, client) => {
           reply(err.toString).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          // condense small version counts to an 'other' category
+          results.rows = dataset.condense(results.rows, 'ymd', 'version')
           reply(results.rows)
         }
       })
