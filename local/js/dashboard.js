@@ -195,6 +195,12 @@ var DAUPlatformRetriever = function() {
   })
 }
 
+var DNUPlatformRetriever = function() {
+  $.ajax('/api/1/dau_platform_first?' + standardParams(), {
+    success: usagePlatformHandler
+  })
+}
+
 var DAURetriever = function() {
   $.ajax('/api/1/dau?' + standardParams(), {
     success: usagePlatformHandler
@@ -223,6 +229,11 @@ var menuItems = {
     show: "usageContent",
     title: "Usage by Platform",
     retriever: DAUPlatformRetriever
+  },
+  "mnDailyNew": {
+    show: "usageContent",
+    title: "Daily New Users",
+    retriever: DNUPlatformRetriever
   },
   "mnUsageAgg": {
     title: "Usage (Aggregated)",
@@ -310,6 +321,12 @@ router.get('versions', function(req) {
 
 router.get('usage', function(req) {
   pageState.currentlySelected = 'mnUsage'
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('daily_new', function(req) {
+  pageState.currentlySelected = 'mnDailyNew'
   updatePageUIState()
   refreshData()
 })

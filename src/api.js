@@ -27,6 +27,22 @@ GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
 
+const DAU_PLATFORM_FIRST = `
+SELECT
+  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+  FC.platform,
+  SUM(FC.total) AS count,
+ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd AND first_time AND platform = ANY ($2) AND channel = ANY ($3)), 3) * 100 AS daily_percentage
+FROM dw.fc_usage FC
+WHERE
+  FC.ymd >= current_date - CAST($1 as INTERVAL) AND
+  first_time AND
+  FC.platform = ANY ($2) AND
+  FC.channel = ANY ($3)
+GROUP BY FC.ymd, FC.platform
+ORDER BY FC.ymd DESC, FC.platform
+`
+
 const DAU_VERSION = `
 SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
@@ -169,6 +185,25 @@ exports.setup = (server, client) => {
       let platforms = platformPostgresArray(request.query.platformFilter)
       let channels = channelPostgresArray(request.query.channelFilter)
       client.query(DAU_PLATFORM, [days, platforms, channels], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => formatPGRow(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Daily new users by platform
+  server.route({
+    method: 'GET',
+    path: '/api/1/dau_platform_first',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10) + ' days'
+      let platforms = platformPostgresArray(request.query.platformFilter)
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(DAU_PLATFORM_FIRST, [days, platforms, channels], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {
