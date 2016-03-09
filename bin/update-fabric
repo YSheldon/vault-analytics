@@ -1,22 +1,20 @@
 #!/usr/bin/env node
 var request = require('request')
+var async = require('async')
+var _ = require('underscore')
 
-var csv = require('../dist/csv-import')
 var pgc = require('../dist/pgc')
+var model = require('../dist/model')
 
 if (!process.env.FABRIC_SESSION) {
   throw new Error("The FABRIC_SESSION environment variable must be set to the contents of the Fabric _fabric_session cookie. Warning! this value is generally valid for two weeks only.")
-}
-
-if (!process.env.CURRENT_VERSION) {
-  throw new Error("The CURRENT_VERSION must be set to the most current version of the laptop-browser. I.e. 0.7.15")
 }
 
 // Note: We are taking the version as a parameter to this script. This will need to be updated everytime we release a new
 // version of the browser. TODO - investigate a way to retrieve the most current version number for this script to be
 // fully automatic.
 var args = require('yargs')
-    .demand(['platform', 'project_id'])
+    .demand(['platform', 'project_id', 'version'])
     .default('channel', 'dev')
     .argv
 
@@ -30,13 +28,13 @@ if (!platforms[args.platform]) {
   throw new Error('Invalid platform ' + args.platform)
 }
 
-var FABRIC_URL = "https://fabric.io/api/v3/projects/PROJECT_ID/answers_csv/dau_csv?start=START&end=END&build=all"
+var FABRIC_DAU_URL = "https://fabric.io/api/v3/projects/PROJECT_ID/answers_csv/dau_csv?start=START&end=END&build=all"
+var FABRIC_DNU_URL = "https://fabric.io/api/v3/projects/PROJECT_ID/answers_csv/dnd_csv?start=START&end=END&build=all"
 
 // Retrieve CSV data from Fabric
-var retrieveFabricCSV = function (done) {
+var retrieveFabricCSV = function (url, done) {
   var end = parseInt((new Date()).getTime() / 1000, 10)
   var start = end - (365 * 24 * 60 * 60)
-  var url = FABRIC_URL
   url = url.replace('PROJECT_ID', args.project_id)
   url = url.replace('START', start)
   url = url.replace('END', end)
@@ -66,18 +64,87 @@ var removeAllEntriesForPlatform = function (client, platform, channel, done) {
   client.query('DELETE FROM dw.fc_usage WHERE platform = $1 AND channel=$2', [platform, channel], done)
 }
 
-// Read, parse and insert DAU into Postgres
+// Build combined records with daily active and daily new users
+var combineDaily = function (dau, dnu) {
+  // Split the rows and remove blank rows
+  var dau_rows = _.map(_.filter(dau.split('\n').slice(1), (row) => {
+    return row.length
+  }), function (row) {
+    var tokens = row.split(',')
+    return [tokens[0], parseInt(tokens[1], 10)]
+  })
+  var dnu_rows = _.map(_.filter(dnu.split('\n').slice(1), (row) => {
+    return row.length
+  }), function (row) {
+    var tokens = row.split(',')
+    return [tokens[0], parseInt(tokens[1], 10)]
+  })
+
+  // Combine active / new users
+  var days = {}
+  _.each(dau_rows, function (dau_row) {
+    days[dau_row[0]] = {
+      active_users: dau_row[1]
+    }
+  })
+  _.each(dnu_rows, function (dnu_row) {
+    days[dnu_row[0]].new_users = dnu_row[1]
+  })
+
+  return days
+}
+
+// Build usage records in insertion format
+var buildUsageRecords = function (days, platform, version, channel) {
+  var usageRecord = function(ymd, ft, value) {
+    return {
+      _id: {
+        ymd: ymd,
+        platform: platform,
+        version: version,
+        channel: channel,
+        first_time: ft
+      },
+      count: value
+    }
+  }
+
+  var records = []
+  _.each(days, function(v, k) {
+    // Returning users
+    records.push(usageRecord(k, false, v.active_users - v.new_users))
+    // New users
+    records.push(usageRecord(k, true, v.new_users))
+  })
+
+  return records
+}
+
+// Read, parse and insert DAU and DNU into Postgres
 pgc.setup(function(client) {
-  retrieveFabricCSV(function(contents) {
-    removeAllEntriesForPlatform(client, args.platform, args.channel, function(deleteError, result) {
-      if (deleteError) {
-        throw new Error(deleteError.toString())
-      }
-      csv.import(client, contents, args.platform, process.env.CURRENT_VERSION, args.channel, function (err) {
-        if (err) {
-          throw new Error(err.toString())
+  retrieveFabricCSV(FABRIC_DAU_URL, function(contents) {
+    retrieveFabricCSV(FABRIC_DNU_URL, function(contents_dnu) {
+      var days = combineDaily(contents, contents_dnu)
+      var records = buildUsageRecords(days, args.platform, args.version, args.channel)
+      console.log(records)
+
+      // Remove existing records for platform / channel
+      removeAllEntriesForPlatform(client, args.platform, args.channel, function(deleteError, result) {
+        if (deleteError) {
+          throw new Error(deleteError.toString())
         }
-        client.end()
+
+        // Build upsert functions
+        var funcs = _.map(records, (result) => model.usageUpserter(client, result))
+
+        // Insert records
+        async.series(funcs, function (err) {
+          if (err) {
+            throw new Error(err.toString())
+          }
+          console.log("Done")
+          client.end()
+        })
       })
     })
   })
