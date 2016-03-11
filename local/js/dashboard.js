@@ -69,6 +69,71 @@ var channelKeys = _.keys(channels)
 
 var reversePlatforms = _.object(_.map(platforms, function(platform) { return [platform.label, platform] }))
 
+var round = function (x, n) {
+  n = n || 0
+  return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
+}
+
+var statsHandler = function(rows) {
+  // Build the table
+  var table = $('#statsDataTable tbody')
+  table.empty()
+  rows.forEach(function(row) {
+    var buf = '<tr>'
+    buf = buf + '<td nowrap>' + row.ymd + '</td>'
+    buf = buf + '<td class="text-right">' + row.count + '</td>'
+    buf = buf + '<td class="text-right">' + row.prev + '</td>'
+    buf = buf + '<td class="text-right">' + row.delta + '</td>'
+    buf = buf + '<td class="text-right">' + round(row.change * 100, 1) + '</td>'
+    buf = buf + '<td class="text-right">' + row.first_count + '</td>'
+    buf = buf + '<td class="text-right">' + round(row.retention, 1) + '</td>'
+    buf = buf + '</tr>'
+    table.append(buf)
+  })
+
+  // Build the graph
+  rows = rows.reverse()
+
+  // Build a list of unique labels (ymd)
+  var labels = _.chain(rows)
+      .map(function(row) { return row.ymd })
+      .uniq()
+      .sort()
+      .value()
+
+  var ys = ['change', 'retention']
+
+  // Build the Chart.js data structure
+  var datasets = []
+  ys.forEach(function(y) {
+    var dataset = []
+    rows.forEach(function(row) {
+      dataset.push(row[y])
+    })
+    datasets.push(dataset)
+  })
+
+  var data = {
+    labels: labels,
+    datasets: _.map(datasets, function(dataset, idx) {
+      return _.extend({
+        label: ys[idx],
+        data: dataset
+      }, styles[idx])
+    })
+  }
+
+  var container = $("#statsChartContainer")
+  container.empty()
+  container.append("<canvas id='statsChart' height='300' width='800'></canvas>")
+
+  var statsChart = document.getElementById("statsChart")
+  var ctx = statsChart.getContext("2d")
+  var myChart = new Chart(ctx).Line(data)
+  $("#statsChartLegend").html(myChart.generateLegend())
+
+}
+
 // Build a handler for a successful API request
 var buildSuccessHandler = function (x, y, x_label, y_label) {
   return function(rows) {
@@ -158,7 +223,8 @@ var usageVersionHandler = buildSuccessHandler('ymd', 'version', 'Date', 'Version
 var contents = [
   "usageContent",
   "crashesContent",
-  "overviewContent"
+  "overviewContent",
+  "statsContent"
 ]
 
 var serializePlatformParams = function () {
@@ -207,6 +273,12 @@ var DAURetriever = function() {
   })
 }
 
+var DUSRetriever = function() {
+  $.ajax('/api/1/dus?' + standardParams(), {
+    success: statsHandler
+  })
+}
+
 var crashesRetriever = function() {
   $.ajax('/api/1/dc_platform?' + standardParams(), {
     success: usagePlatformHandler
@@ -229,6 +301,11 @@ var menuItems = {
     show: "usageContent",
     title: "Usage by Platform",
     retriever: DAUPlatformRetriever
+  },
+  "mnDailyUsageStats": {
+    show: "statsContent",
+    title: "Daily Usage Stats",
+    retriever: DUSRetriever
   },
   "mnDailyNew": {
     show: "usageContent",
@@ -327,6 +404,12 @@ router.get('usage', function(req) {
 
 router.get('daily_new', function(req) {
   pageState.currentlySelected = 'mnDailyNew'
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('daily_usage_stats', function(req) {
+  pageState.currentlySelected = 'mnDailyUsageStats'
   updatePageUIState()
   refreshData()
 })

@@ -1,6 +1,40 @@
 var _ = require('underscore')
 var dataset = require('./dataset')
 
+const DELTA = `
+SELECT
+  USG.ymd,
+  USG.count,
+  USG.prev,
+  USG.delta,
+  USG.delta / USG.count AS change,
+  FST.first_count,
+  USG.delta / FST.first_count AS retention
+FROM
+(SELECT
+   TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd,
+   SUM(total) AS count,
+   COALESCE(LAG(SUM(total), 1) OVER (ORDER BY ymd), SUM(total)) AS prev,
+   SUM(total) - COALESCE(LAG(SUM(total), 1) OVER (ORDER BY ymd), SUM(total)) AS delta
+ FROM dw.fc_usage
+ WHERE
+   ymd >= current_date - CAST($1 as INTERVAL) AND
+   platform = ANY ($2) AND
+   channel = ANY ($3)
+ GROUP BY ymd ) USG JOIN
+(SELECT
+   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+   SUM(FC.total) AS first_count
+ FROM dw.fc_usage FC
+ WHERE
+   FC.ymd >= current_date - CAST($1 as INTERVAL) AND
+   first_time AND
+   FC.platform = ANY ($2) AND
+   FC.channel = ANY ($3)
+ GROUP BY FC.ymd ) FST ON USG.ymd = FST.ymd
+ORDER BY USG.ymd DESC
+`
+
 const DAU = `
 SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, SUM(total) AS count
 FROM dw.fc_usage
@@ -208,6 +242,30 @@ exports.setup = (server, client) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Daily user retention stats
+  server.route({
+    method: 'GET',
+    path: '/api/1/dus',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10) + ' days'
+      let platforms = platformPostgresArray(request.query.platformFilter)
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(DELTA, [days, platforms, channels], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          const columns = ['count', 'prev', 'delta', 'change', 'first_count', 'retention']
+          results.rows.forEach((row) => {
+            _.each(columns, (column) => {
+              row[column] = parseFloat(row[column])
+            })
+          })
           reply(results.rows)
         }
       })
