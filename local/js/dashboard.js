@@ -245,7 +245,8 @@ var standardParams = function() {
   return $.param({
     days: pageState.days,
     platformFilter: serializePlatformParams(),
-    channelFilter: serializeChannelParams()
+    channelFilter: serializeChannelParams(),
+    showToday: pageState.showToday
   })
 }
 
@@ -348,7 +349,8 @@ var pageState = {
     dev: true,
     beta: false,
     stable: false
-  }
+  },
+  showToday: true
 }
 
 $("#daysSelector").on('change', function (evt, value) {
@@ -446,4 +448,9 @@ _.forEach(channelKeys, function(id) {
     pageState.channelFilter[id] = this.checked
     refreshData()
   })
+})
+
+$("#btn-show-today").on('change', function() {
+  pageState.showToday = this.checked
+  refreshData()
 })

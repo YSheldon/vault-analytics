@@ -132,6 +132,25 @@ const formatPGRow = (row) => {
   return row
 }
 
+const left = (text, size) => {
+
+}
+
+const todayISODate = () => {
+  let d = new Date()
+  return [d.getFullYear(), ('0' + (d.getMonth() + 1)).slice(-2), ('0' + d.getDate()).slice(-2)].join('-')
+}
+
+const potentiallyFilterToday = (rows, showToday) => {
+  if (!showToday) {
+    var today = todayISODate()
+    rows = _.filter(rows, (row) => {
+      return row.ymd < today
+    })
+  }
+  return rows
+}
+
 /*
  * Pull k/v pairs out of a contained child object
  *
@@ -183,6 +202,7 @@ exports.setup = (server, client) => {
           results.rows.forEach((row) => formatPGRow(row))
           // condense small version counts to an 'other' category
           results.rows = dataset.condense(results.rows, 'ymd', 'version')
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
@@ -203,6 +223,7 @@ exports.setup = (server, client) => {
           reply(err.toString()).status(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
@@ -223,6 +244,7 @@ exports.setup = (server, client) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
@@ -242,6 +264,7 @@ exports.setup = (server, client) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
@@ -266,6 +289,7 @@ exports.setup = (server, client) => {
               row[column] = parseFloat(row[column])
             })
           })
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
@@ -286,6 +310,7 @@ exports.setup = (server, client) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
@@ -306,6 +331,7 @@ exports.setup = (server, client) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
