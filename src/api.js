@@ -1,5 +1,8 @@
 var _ = require('underscore')
+var assert = require('assert')
+
 var dataset = require('./dataset')
+var retriever = require('./retriever')
 
 const DELTA = `
 SELECT
@@ -44,6 +47,39 @@ WHERE
   channel = ANY ($3)
 GROUP BY ymd
 ORDER BY ymd DESC
+`
+
+const MAU_PLATFORM = `
+SELECT
+  LEFT(ymd::text, 7) || '-01' AS ymd,
+  platform,
+  sum(total) AS count
+FROM dw.fc_usage_month
+WHERE
+  platform = ANY ($1) AND
+  channel = ANY ($2) AND
+  ymd > '2015-12-31'
+GROUP BY
+  left(ymd::text, 7),
+  platform
+ORDER BY
+  left(ymd::text, 7),
+ platform
+`
+
+const MAU = `
+SELECT
+  LEFT(ymd::text, 7) || '-01' AS ymd,
+  sum(total) AS count
+FROM dw.fc_usage_month
+WHERE
+  platform = ANY ($1) AND
+  channel = ANY ($2) AND
+  ymd > '2015-12-31'
+GROUP BY
+  left(ymd::text, 7)
+ORDER BY
+  left(ymd::text, 7)
 `
 
 const DAU_PLATFORM = `
@@ -132,10 +168,6 @@ const formatPGRow = (row) => {
   return row
 }
 
-const left = (text, size) => {
-
-}
-
 const todayISODate = () => {
   let d = new Date()
   return [d.getFullYear(), ('0' + (d.getMonth() + 1)).slice(-2), ('0' + d.getDate()).slice(-2)].join('-')
@@ -149,19 +181,6 @@ const potentiallyFilterToday = (rows, showToday) => {
     })
   }
   return rows
-}
-
-/*
- * Pull k/v pairs out of a contained child object
- *
- * { a: { b: 1, c: 2 }, d: 3 } -> { b: 1, c: 2, d: 3}
- */
-const pullOutAttribs = (obj, k) => {
-  Object.keys(obj[k]).forEach((internalKey) => {
-    obj[internalKey] = obj[k][internalKey]
-  })
-  delete obj[k]
-  return obj
 }
 
 let allPlatforms = ['osx', 'winx64', 'ios', 'android', 'unknown']
@@ -186,7 +205,9 @@ let channelPostgresArray = (channelFilter) => {
 }
 
 // Data endpoints
-exports.setup = (server, client) => {
+exports.setup = (server, client, mongo) => {
+  assert(mongo, 'mongo configured')
+
   // Version for today's daily active users
   server.route({
     method: 'GET',
@@ -245,6 +266,44 @@ exports.setup = (server, client) => {
         } else {
           results.rows.forEach((row) => formatPGRow(row))
           results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Monthly active users by platform
+  server.route({
+    method: 'GET',
+    path: '/api/1/mau_platform',
+    handler: function (request, reply) {
+      let platforms = platformPostgresArray(request.query.platformFilter)
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(MAU_PLATFORM, [platforms, channels], (err, results) => {
+        if (err) {
+          console.log(err.toString())
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => formatPGRow(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Monthly active users
+  server.route({
+    method: 'GET',
+    path: '/api/1/mau',
+    handler: function (request, reply) {
+      let platforms = platformPostgresArray(request.query.platformFilter)
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(MAU, [platforms, channels], (err, results) => {
+        if (err) {
+          console.log(err.toString())
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => formatPGRow(row))
           reply(results.rows)
         }
       })
@@ -338,4 +397,18 @@ exports.setup = (server, client) => {
     }
   })
 
+  // Crashes for a day / platform
+  server.route({
+    method: 'GET',
+    path: '/api/1/dc_platform_detail',
+    handler: function (request, reply) {
+      retriever.crashesForYMDPlatform(mongo, request.query.ymd, request.query.platform, (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          reply(results)
+        }
+      })
+    }
+  })
 }

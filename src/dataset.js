@@ -8,7 +8,7 @@ var _ = require('underscore')
   within a day in which the combined total is less that 2% of the total for the entire
   time period.
 */
-exports.condense = (dataset, groupBy, attrib, limit=0.05, label="other") => {
+exports.condense = (dataset, groupBy, attrib, limit = 0.05, label = 'other') => {
   // Build a clone of the records
   var records = _.clone(dataset)
 

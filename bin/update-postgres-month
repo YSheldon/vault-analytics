@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 var db = require('../dist/mongoc')
-var reporting = require('../dist/retriever')
+var retriever = require('../dist/retriever')
 var model = require('../dist/model')
 
 var async = require('async')
 var _ = require('underscore')
+var fs = require('fs')
 var pgc = require('../dist/pgc')
 
 // Connect to postgres
@@ -15,16 +16,14 @@ pgc.setup(function (err, client) {
   console.log('[OK] Connected to postgres')
 
   db.setup(function(err, connection) {
-    if (err) {
-      throw new Error(err)
-    }
-
     console.log('[OK] Connected to mongo')
-    reporting.dailyCrashReportsFullGrouped(connection, function(err, results) {
+    // Retrieve the daily active user stats
+    retriever.dailyMonthlyUsers(connection, function(err, results) {
       console.log(results)
+
       // Build funcs to execute
       var funcs = _.map(results, function(row) {
-        return model.crashUpserter(client, row)
+        return model.usageMonthlyUpserter(client, row)
       })
 
       // Insert rows

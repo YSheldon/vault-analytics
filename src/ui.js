@@ -1,5 +1,5 @@
 const path = require('path')
-const UUID = require('uuid-js');
+const UUID = require('uuid-js')
 
 var shouldCache = true
 if (process.env.LOCAL) {
@@ -10,12 +10,12 @@ if (process.env.LOCAL) {
 exports.setup = (server) => {
   // The ADMIN_PASSWORD environment variable must be set
   if (!process.env.ADMIN_PASSWORD) {
-    throw new Error("ADMIN_PASSWORD not set")
+    throw new Error('ADMIN_PASSWORD not set')
   }
 
   // The SESSION_SECRET environment variable must be set
   if (!process.env.SESSION_SECRET) {
-    throw new Error("SESSION_SECRET not set")
+    throw new Error('SESSION_SECRET not set')
   }
 
   // Register the server side templates
@@ -48,19 +48,19 @@ exports.setup = (server) => {
   // Login handler
   const login = function (request, reply) {
     if (request.auth.isAuthenticated) {
-      return reply.redirect('/dashboard');
+      return reply.redirect('/dashboard')
     }
 
-    let message = '';
-    let account = null;
+    let message = ''
+    let account = null
 
     if (request.method === 'post') {
       if (!request.payload.username || !request.payload.password) {
-        message = 'Missing username or password';
+        message = 'Missing username or password'
       } else {
-        account = users[request.payload.username];
+        account = users[request.payload.username]
         if (!account || account.password !== request.payload.password) {
-          message = 'Invalid username or password';
+          message = 'Invalid username or password'
         }
       }
     }
@@ -69,8 +69,8 @@ exports.setup = (server) => {
       return reply.view('signin', { message: message })
     }
 
-    const uuid4 = UUID.create();
-    const sid = String(uuid4.toString());
+    const uuid4 = UUID.create()
+    const sid = String(uuid4.toString())
     request.server.app.cache.set(sid, { account: account }, 0, (err) => {
       if (err) {
         reply(err)
@@ -90,6 +90,9 @@ exports.setup = (server) => {
 
   // Auth library
   server.register(require('hapi-auth-cookie'), (err) => {
+    if (err) {
+      throw new Error(err)
+    }
 
     const cache = server.cache({
       segment: 'sessions',

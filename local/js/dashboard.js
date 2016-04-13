@@ -135,7 +135,14 @@ var statsHandler = function(rows) {
 }
 
 // Build a handler for a successful API request
-var buildSuccessHandler = function (x, y, x_label, y_label) {
+var buildSuccessHandler = function (x, y, x_label, y_label, count_link_func) {
+  if (!count_link_func) {
+    console.log("Defining custom link_func")
+    count_link_func = function(row, count) {
+      return count
+    }
+  }
+
   return function(rows) {
 
     var table = $('#usageDataTable tbody')
@@ -155,7 +162,7 @@ var buildSuccessHandler = function (x, y, x_label, y_label) {
       var buf = '<tr class="' + ctrlClass + '">'
       buf = buf + '<td>' + row[x] + '</td>'
       buf = buf + '<td>' + (row[y] || 'All') + '</td>'
-      buf = buf + '<td class="text-right">' + row.count + '</td>'
+      buf = buf + '<td class="text-right">' + count_link_func(row, row.count) + '</td>'
       if (row.daily_percentage !== undefined) {
         buf = buf + '<td class="text-right">' + row.daily_percentage + '%</td>'
       }
@@ -218,6 +225,9 @@ var buildSuccessHandler = function (x, y, x_label, y_label) {
 // Data type success handlers
 var usagePlatformHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform')
 var usageVersionHandler = buildSuccessHandler('ymd', 'version', 'Date', 'Version')
+var usageCrashesHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', function(row, count) {
+  return "<a href='#crashes_platform_detail/" + row.ymd + "/" + row.platform + "'>" + count + "</a>"
+})
 
 // Array of content panels
 var contents = [
@@ -262,6 +272,18 @@ var DAUPlatformRetriever = function() {
   })
 }
 
+var MAUPlatformRetriever = function() {
+  $.ajax('/api/1/mau_platform?' + standardParams(), {
+    success: usagePlatformHandler
+  })
+}
+
+var MAUAggPlatformRetriever = function() {
+  $.ajax('/api/1/mau?' + standardParams(), {
+    success: usagePlatformHandler
+  })
+}
+
 var DNUPlatformRetriever = function() {
   $.ajax('/api/1/dau_platform_first?' + standardParams(), {
     success: usagePlatformHandler
@@ -282,7 +304,13 @@ var DUSRetriever = function() {
 
 var crashesRetriever = function() {
   $.ajax('/api/1/dc_platform?' + standardParams(), {
-    success: usagePlatformHandler
+    success: usageCrashesHandler
+  })
+}
+
+var crashesDetailRetriever = function() {
+  $.ajax('/api/1/dc_platform?' + standardParams(), {
+    success: usageCrashesHandler
   })
 }
 
@@ -300,7 +328,7 @@ var menuItems = {
   },
   "mnUsage": {
     show: "usageContent",
-    title: "Usage by Platform",
+    title: "Daily Active Users by Platform (DAU)",
     retriever: DAUPlatformRetriever
   },
   "mnDailyUsageStats": {
@@ -308,31 +336,46 @@ var menuItems = {
     title: "Daily Usage Stats",
     retriever: DUSRetriever
   },
+  "mnUsageMonth": {
+    show: "usageContent",
+    title: "Monthly Active Users by Platform (MAU)",
+    retriever: MAUPlatformRetriever
+  },
+  "mnUsageMonthAgg": {
+    show: "usageContent",
+    title: "Monthly Active Users (MAU)",
+    retriever: MAUAggPlatformRetriever
+  },
   "mnDailyNew": {
     show: "usageContent",
-    title: "Daily New Users",
+    title: "Daily New Users by Platform (DNU)",
     retriever: DNUPlatformRetriever
   },
   "mnUsageAgg": {
-    title: "Usage (Aggregated)",
+    title: "Daily Active Users (DAU)",
     show: "usageContent",
     retriever: DAURetriever
   },
   "mnVersions": {
-    title: "Versions",
+    title: "Daily Active Users by Version (DAU)",
     show: "usageContent",
     retriever: versionsRetriever
   },
   "mnCrashes": {
-    title: "Crashes by Platform",
+    title: "Daily Crashes by Platform",
     show: "usageContent",
     retriever: crashesRetriever
   },
   "mnCrashesVersion": {
-    title: "Crashes by Platform / Version",
+    title: "Daily Crashes by Version",
     show: "usageContent",
     retriever: crashesVersionRetriever
-  }
+  },
+  "mnCrashesDetail": {
+    title: "Crash Details",
+    show: "usageContent",
+    retriever: crashesDetailRetriever
+  },
 }
 
 // Mutable page state
@@ -404,6 +447,18 @@ router.get('usage', function(req) {
   refreshData()
 })
 
+router.get('usage_month', function(req) {
+  pageState.currentlySelected = 'mnUsageMonth'
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('usage_month_agg', function(req) {
+  pageState.currentlySelected = 'mnUsageMonthAgg'
+  updatePageUIState()
+  refreshData()
+})
+
 router.get('daily_new', function(req) {
   pageState.currentlySelected = 'mnDailyNew'
   updatePageUIState()
@@ -426,6 +481,13 @@ router.get('crashes_platform', function(req) {
   pageState.currentlySelected = 'mnCrashes'
   updatePageUIState()
   refreshData()
+})
+
+router.get('crashes_platform_detail/:ymd/:platform', function(req) {
+  console.log("crashes_platform_detail")
+  pageState.currentlySelected = 'mnCrashesDetails'
+  updatePageUIState()
+  //refreshData()
 })
 
 router.get('crashes_platform_version', function(req) {

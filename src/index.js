@@ -1,6 +1,8 @@
 let Hapi = require('hapi')
 let Inert = require('inert')
 let assert = require('assert')
+let async = require('async')
+
 let ui = require('./ui')
 let api = require('./api')
 
@@ -10,9 +12,12 @@ let profile = process.env.NODE_ENV || 'development'
 let config = require('../config/config.' + profile + '.js')
 
 let pgc = require('./pgc')
+let mgc = require('./mongoc')
 
-// setup connection to MongoDB
-pgc.setup((pg) => {
+let kickoff = (err, connections) => {
+  if (err) {
+    throw new Error(err)
+  }
   let server = new Hapi.Server()
   let connection = server.connection({
     host: config.host,
@@ -30,7 +35,7 @@ pgc.setup((pg) => {
   })
 
   // Setup the API
-  api.setup(server, pg)
+  api.setup(server, connections.pg, connections.mg)
 
   // Setup the UI for the dashboard
   ui.setup(server)
@@ -39,4 +44,14 @@ pgc.setup((pg) => {
     assert(!err, `error starting service ${err}`)
     console.log('Analytics service started')
   })
-})
+}
+
+// Connect to postgres and mongo
+async.parallel(
+  {
+    pg: pgc.setup,
+    mg: mgc.setup
+  },
+  kickoff
+)
+

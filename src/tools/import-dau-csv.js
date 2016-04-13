@@ -18,7 +18,7 @@ if (!platforms[args.platform]) {
 }
 
 // Read and parse input file, insert DAU into Postgres
-pgc.setup(function(client) {
+pgc.setup(function (client) {
   var contents = fs.readFileSync(args.file, 'utf-8')
   csv.import(client, contents, args.platform, args.version, function (err) {
     console.log(err)

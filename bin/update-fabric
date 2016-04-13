@@ -70,12 +70,14 @@ var combineDaily = function (dau, dnu) {
   var dau_rows = _.map(_.filter(dau.split('\n').slice(1), (row) => {
     return row.length
   }), function (row) {
+    row = row.replace(/"/g, '')
     var tokens = row.split(',')
     return [tokens[0], parseInt(tokens[1], 10)]
   })
   var dnu_rows = _.map(_.filter(dnu.split('\n').slice(1), (row) => {
     return row.length
   }), function (row) {
+    row = row.replace(/"/g, '')
     var tokens = row.split(',')
     return [tokens[0], parseInt(tokens[1], 10)]
   })
@@ -121,12 +123,11 @@ var buildUsageRecords = function (days, platform, version, channel) {
 }
 
 // Read, parse and insert DAU and DNU into Postgres
-pgc.setup(function(client) {
+pgc.setup(function(err, client) {
   retrieveFabricCSV(FABRIC_DAU_URL, function(contents) {
     retrieveFabricCSV(FABRIC_DNU_URL, function(contents_dnu) {
       var days = combineDaily(contents, contents_dnu)
       var records = buildUsageRecords(days, args.platform, args.version, args.channel)
-      console.log(records)
 
       // Remove existing records for platform / channel
       removeAllEntriesForPlatform(client, args.platform, args.channel, function(deleteError, result) {

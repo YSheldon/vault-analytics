@@ -6,7 +6,7 @@ var model = require('../dist/model')
 var async = require('async')
 var _ = require('underscore')
 var fs = require('fs')
-var pg = require('pg')
+var pgc = require('../dist/pgc')
 
 // Read a list of exception records to be added to the aggregation stream
 // These can be used for external data sources not directly available,
@@ -28,13 +28,13 @@ var makeExceptionsUpserter = function (client) {
 }
 
 // Connect to postgres
-pg.connect(process.env.DATABASE_URL, function(err, client) {
+pgc.setup(function (err, client) {
   if (err) {
     throw new Error(err)
   }
   console.log('[OK] Connected to postgres')
 
-  db.setup(function(connection) {
+  db.setup(function(err, connection) {
     console.log('[OK] Connected to mongo')
     // Retrieve the daily active user stats
     retriever.dailyActiveUsersFullGrouped(connection, exceptions, function(err, results) {

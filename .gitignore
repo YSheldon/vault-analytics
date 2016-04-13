@@ -34,3 +34,4 @@ releases
 ssl
 
 bower_components
+tmp/

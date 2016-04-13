@@ -8,6 +8,6 @@ exports.setup = (done) => {
   MongoClient.connect(mongoURL, (err, connection) => {
     assert.equal(null, err)
     console.log('connection to Mongo established')
-    done(connection)
+    done(err, connection)
   })
 }

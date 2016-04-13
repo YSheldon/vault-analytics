@@ -7,8 +7,9 @@ if (!DATABASE_URL) {
 
 exports.setup = (done) => {
   // Connect to postgres
-  pg.connect(DATABASE_URL, function(err, client) {
+  pg.connect(DATABASE_URL, function (err, client) {
     if (err) throw err
-    done(client)
+    console.log('connection to Postgres established')
+    done(err, client)
   })
 }

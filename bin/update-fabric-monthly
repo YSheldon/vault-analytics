@@ -1,0 +1,126 @@
+#!/usr/bin/env node
+var request = require('request')
+var async = require('async')
+var _ = require('underscore')
+
+var pgc = require('../dist/pgc')
+var model = require('../dist/model')
+
+if (!process.env.FABRIC_SESSION) {
+  throw new Error("The FABRIC_SESSION environment variable must be set to the contents of the Fabric _fabric_session cookie. Warning! this value is generally valid for two weeks only.")
+}
+
+// Note: We are taking the version as a parameter to this script. This will need to be updated everytime we release a new
+// version of the browser. TODO - investigate a way to retrieve the most current version number for this script to be
+// fully automatic.
+var args = require('yargs')
+    .demand(['platform', 'project_id', 'version'])
+    .default('channel', 'dev')
+    .argv
+
+// Valid platform identifiers
+var platforms = {
+  'android': args.project_id,
+  'ios': args.project_id
+}
+
+if (!platforms[args.platform]) {
+  throw new Error('Invalid platform ' + args.platform)
+}
+
+var FABRIC_MAU_URL = "https://fabric.io/api/v3/projects/PROJECT_ID/answers_csv/mau_csv?start=START&end=END&build=all"
+
+// Retrieve CSV data from Fabric
+var retrieveFabricCSV = function (url, done) {
+  var end = parseInt((new Date()).getTime() / 1000, 10)
+  var start = end - (365 * 24 * 60 * 60)
+  url = url.replace('PROJECT_ID', args.project_id)
+  url = url.replace('START', start)
+  url = url.replace('END', end)
+
+  var options = {
+    url: url,
+    method: 'GET',
+    headers: {
+      Cookie: '_fabric_session=' + process.env.FABRIC_SESSION,
+      'Upgrade-Insecure-Requests': 1
+    }
+  }
+
+  request(
+    options,
+    function (err, results, body) {
+      if (err) {
+        throw new Error(err.toString())
+      }
+      done(body)
+    }
+  )
+}
+
+// Remove all records for a platform and channel
+var removeAllEntriesForPlatformChannel = function (client, platform, channel, done) {
+  client.query('DELETE FROM dw.fc_usage_month WHERE platform = $1 AND channel=$2', [platform, channel], done)
+}
+
+// Build usage records in insertion format
+var usageRecords = function (days, platform, version, channel) {
+  var usageRecord = function(row) {
+    return {
+      _id: {
+        ymd: row[0],
+        platform: platform,
+        version: version,
+        channel: channel
+      },
+      count: row[1]
+    }
+  }
+
+  return _.map(days, usageRecord)
+}
+
+// Determine a summary statistic for a months active users
+var summaryForMonth = (days) => {
+  var months = _.groupBy(days, (row) => {
+    return row[0].substring(0, 7)
+  })
+  return _.map(months, (dayList, k) => {
+    return _.max(dayList, (r) => r[1])
+  })
+}
+
+// Read, parse and insert MAU into Postgres
+pgc.setup(function(err, client) {
+  retrieveFabricCSV(FABRIC_MAU_URL, function(contents) {
+    var days = _.map(_.filter(contents.split('\n').slice(1), (row) => {
+      return row.length
+    }), function (row) {
+      row = row.replace(/"/g, '')
+      var tokens = row.split(',')
+      return [tokens[0], parseInt(tokens[1], 10)]
+    })
+
+    var records = summaryForMonth(days)
+    records = usageRecords(records, args.platform, args.version, args.channel)
+
+    // Remove existing records for platform / channel
+    removeAllEntriesForPlatformChannel(client, args.platform, args.channel, function(deleteError, result) {
+      if (deleteError) {
+        throw new Error(deleteError.toString())
+      }
+
+      // Build upsert functions
+      var funcs = _.map(records, (result) => model.usageMonthlyUpserter(client, result))
+
+      // Insert records
+      async.series(funcs, function (err) {
+        if (err) {
+          throw new Error(err.toString())
+        }
+        console.log("Done")
+        client.end()
+      })
+    })
+  })
+})
