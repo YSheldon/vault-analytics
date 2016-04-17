@@ -42,7 +42,7 @@ const DAU = `
 SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, SUM(total) AS count
 FROM dw.fc_usage
 WHERE
-  ymd >= current_date - CAST($1 as INTERVAL) AND
+  ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   platform = ANY ($2) AND
   channel = ANY ($3)
 GROUP BY ymd
@@ -90,7 +90,7 @@ SELECT
 ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd AND platform = ANY ($2) AND channel = ANY ($3)), 3) * 100 AS daily_percentage
 FROM dw.fc_usage FC
 WHERE
-  FC.ymd >= current_date - CAST($1 as INTERVAL) AND
+  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   FC.platform = ANY ($2) AND
   FC.channel = ANY ($3)
 GROUP BY FC.ymd, FC.platform
@@ -105,7 +105,7 @@ SELECT
 ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd AND first_time AND platform = ANY ($2) AND channel = ANY ($3)), 3) * 100 AS daily_percentage
 FROM dw.fc_usage FC
 WHERE
-  FC.ymd >= current_date - CAST($1 as INTERVAL) AND
+  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   first_time AND
   FC.platform = ANY ($2) AND
   FC.channel = ANY ($3)
@@ -121,7 +121,7 @@ SELECT
   ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd AND platform = ANY ($2) AND channel = ANY ($3) ), 3) * 100 AS daily_percentage
 FROM dw.fc_usage FC
 WHERE
-  FC.ymd >= current_date - CAST($1 as INTERVAL) AND
+  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   FC.platform = ANY ($2) AND
   FC.channel = ANY ($3)
 GROUP BY FC.ymd, FC.version
