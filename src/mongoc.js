@@ -7,7 +7,6 @@ if (!mongoURL) throw new Error('MONGOLAB_URI must be set in environment')
 exports.setup = (done) => {
   MongoClient.connect(mongoURL, (err, connection) => {
     assert.equal(null, err)
-    console.log('connection to Mongo established')
     done(err, connection)
   })
 }

@@ -12,16 +12,16 @@ pgc.setup(function (err, client) {
   if (err) {
     throw new Error(err)
   }
-  console.log('[OK] Connected to postgres')
+  console.log('Update daily crash totals for laptop')
+  console.log('Connected to postgres')
 
   db.setup(function(err, connection) {
     if (err) {
       throw new Error(err)
     }
 
-    console.log('[OK] Connected to mongo')
+    console.log('Connected to mongo')
     reporting.dailyCrashReportsFullGrouped(connection, function(err, results) {
-      console.log(results)
       // Build funcs to execute
       var funcs = _.map(results, function(row) {
         return model.crashUpserter(client, row)

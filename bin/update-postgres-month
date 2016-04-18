@@ -13,14 +13,13 @@ pgc.setup(function (err, client) {
   if (err) {
     throw new Error(err)
   }
-  console.log('[OK] Connected to postgres')
+  console.log('Update monthly totals for laptop')
+  console.log('Connected to postgres')
 
   db.setup(function(err, connection) {
-    console.log('[OK] Connected to mongo')
+    console.log('Connected to mongo')
     // Retrieve the daily active user stats
     retriever.dailyMonthlyUsers(connection, function(err, results) {
-      console.log(results)
-
       // Build funcs to execute
       var funcs = _.map(results, function(row) {
         return model.usageMonthlyUpserter(client, row)

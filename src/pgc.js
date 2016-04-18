@@ -9,7 +9,6 @@ exports.setup = (done) => {
   // Connect to postgres
   pg.connect(DATABASE_URL, function (err, client) {
     if (err) throw err
-    console.log('connection to Postgres established')
     done(err, client)
   })
 }

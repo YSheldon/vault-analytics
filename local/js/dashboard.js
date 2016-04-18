@@ -33,7 +33,12 @@ var platforms = {
   },
   winx64: {
     id: 'winx64',
-    label: 'Windows',
+    label: 'Windows x64',
+    mobile: false
+  },
+  winia32: {
+    id: 'winia32',
+    label: 'Windows ia32',
     mobile: false
   },
   android: {
@@ -385,6 +390,7 @@ var pageState = {
   platformFilter: {
     osx: false,
     winx64: false,
+    winia32: false,
     ios: false,
     android: false
   },

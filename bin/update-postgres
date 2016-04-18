@@ -32,14 +32,13 @@ pgc.setup(function (err, client) {
   if (err) {
     throw new Error(err)
   }
+  console.log('Update daily totals for laptop')
   console.log('[OK] Connected to postgres')
 
   db.setup(function(err, connection) {
     console.log('[OK] Connected to mongo')
     // Retrieve the daily active user stats
     retriever.dailyActiveUsersFullGrouped(connection, exceptions, function(err, results) {
-      console.log(results)
-
       // Build funcs to execute
       var funcs = _.map(results, function(row) {
         return model.usageUpserter(client, row)

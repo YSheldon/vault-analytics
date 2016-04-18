@@ -183,7 +183,7 @@ const potentiallyFilterToday = (rows, showToday) => {
   return rows
 }
 
-let allPlatforms = ['osx', 'winx64', 'ios', 'android', 'unknown']
+let allPlatforms = ['osx', 'winx64', 'winia32', 'ios', 'android', 'unknown', 'linux']
 let allChannels = ['dev', 'beta', 'stable']
 
 let platformPostgresArray = (platformFilter) => {
