@@ -58,7 +58,7 @@ FROM dw.fc_usage_month
 WHERE
   platform = ANY ($1) AND
   channel = ANY ($2) AND
-  ymd > '2015-12-31'
+  ymd > '2016-01-31'
 GROUP BY
   left(ymd::text, 7),
   platform
@@ -75,7 +75,7 @@ FROM dw.fc_usage_month
 WHERE
   platform = ANY ($1) AND
   channel = ANY ($2) AND
-  ymd > '2015-12-31'
+  ymd > '2016-01-31'
 GROUP BY
   left(ymd::text, 7)
 ORDER BY
@@ -173,11 +173,26 @@ const todayISODate = () => {
   return [d.getFullYear(), ('0' + (d.getMonth() + 1)).slice(-2), ('0' + d.getDate()).slice(-2)].join('-')
 }
 
+const todayISOMonth = () => {
+  let d = new Date()
+  return [d.getFullYear(), ('0' + (d.getMonth() + 1)).slice(-2), '01'].join('-')
+}
+
 const potentiallyFilterToday = (rows, showToday) => {
   if (!showToday) {
     var today = todayISODate()
     rows = _.filter(rows, (row) => {
       return row.ymd < today
+    })
+  }
+  return rows
+}
+
+const potentiallyFilterThisMonth = (rows, showMonth) => {
+  if (!showMonth) {
+    var thisMonth = todayISOMonth()
+    rows = _.filter(rows, (row) => {
+      return row.ymd < thisMonth
     })
   }
   return rows
@@ -285,6 +300,7 @@ exports.setup = (server, client, mongo) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterThisMonth(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
@@ -304,6 +320,7 @@ exports.setup = (server, client, mongo) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterThisMonth(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
