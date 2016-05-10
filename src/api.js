@@ -97,6 +97,43 @@ GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
 
+const DAU_PLATFORM_MINUS_FIRST = `
+SELECT
+  USAGE.ymd,
+  USAGE.platform,
+  USAGE.count AS all_count,
+  FIR.first_count,
+  USAGE.count - FIR.first_count AS count
+FROM
+(
+SELECT
+  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+  FC.platform,
+  SUM(FC.total) AS count
+FROM dw.fc_usage FC
+WHERE
+  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
+  FC.platform = ANY ($2) AND
+  FC.channel = ANY ($3)
+GROUP BY FC.ymd, FC.platform
+  ORDER BY FC.ymd DESC, FC.platform
+) USAGE JOIN (
+SELECT
+  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+  FC.platform,
+  SUM(FC.total) AS first_count
+FROM dw.fc_usage FC
+WHERE
+  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
+  FC.platform = ANY ($2) AND
+  FC.channel = ANY ($3) AND
+  FC.first_time
+GROUP BY FC.ymd, FC.platform
+  ORDER BY FC.ymd DESC, FC.platform
+) FIR ON USAGE.ymd = FIR.ymd AND USAGE.platform = FIR.platform
+ORDER BY USAGE.ymd DESC, USAGE.platform
+`
+
 const DAU_PLATFORM_FIRST = `
 SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
@@ -161,6 +198,12 @@ ORDER BY FC.ymd DESC, FC.platform || ' ' || FC.version
 const formatPGRow = (row) => {
   if (row.count) {
     row.count = parseInt(row.count, 10)
+    if (row.first_count) {
+      row.first_count = parseInt(row.first_count, 10)
+    }
+    if (row.all_count) {
+      row.all_count = parseInt(row.all_count, 10)
+    }
   }
   if (row.daily_percentage) {
     row.daily_percentage = parseFloat(row.daily_percentage)
@@ -276,6 +319,27 @@ exports.setup = (server, client, mongo) => {
       let platforms = platformPostgresArray(request.query.platformFilter)
       let channels = channelPostgresArray(request.query.channelFilter)
       client.query(DAU_PLATFORM, [days, platforms, channels], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+    // Daily active users by platform
+  server.route({
+    method: 'GET',
+    path: '/api/1/dau_platform_minus_first',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10)
+      days += ' days'
+      let platforms = platformPostgresArray(request.query.platformFilter)
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(DAU_PLATFORM_MINUS_FIRST, [days, platforms, channels], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {
