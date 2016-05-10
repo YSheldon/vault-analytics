@@ -408,9 +408,9 @@ var pageState = {
   channelFilter: {
     dev: true,
     beta: false,
-    stable: false
+    stable: true
   },
-  showToday: true
+  showToday: false
 }
 
 $("#daysSelector").on('change', function (evt, value) {
