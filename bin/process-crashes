@@ -1,0 +1,142 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+const async = require('async')
+const amqp = require('amqplib/callback_api')
+const elasticsearch = require('elasticsearch')
+
+const pgc = require('../dist/pgc')
+const mini = require('../dist/mini')
+
+// RabbitMQ connection parameters
+const MQ_HOST = process.env.MQ_HOST || 'localhost'
+const MQ_QUEUE = process.env.MQ_QUEUE || 'crashes'
+
+// ElasticSearch connection parameters
+const ES_HOST = process.env.ES_HOST || 'localhost'
+const ES_PORT = process.env.ES_PORT || 9200
+const ES_INDEX = process.env.ES_INDEX || 'crashes'
+const ES_TYPE = process.env.ES_TYPE || 'crash'
+
+// Number of milliseconds for this process to run before timing out
+const TIMEOUT = process.env.TIMEOUT || 60000
+
+// Connect to Elastic Search at a host and port
+const connectElasticSearch = function(cb) {
+  var es = new elasticsearch.Client({
+    host: `${ES_HOST}:${ES_PORT}`,
+    log: null
+  })
+  cb(null, es)
+}
+
+// Connect to messaging system and return a communication channel
+const connectAMQP = function(cb) {
+  var amqpConnectionString = 'amqp://' + MQ_HOST + ':5672'
+  console.log('Connecting to AMQP server at ' + amqpConnectionString)
+  amqp.connect(amqpConnectionString, (err, conn) => {
+    if (err != null) {
+      throw new Error(err)
+    }
+    console.log('AMQP connection established')
+    var on_open = (err, ch) => {
+      console.log(`AMQP connected to channel ${MQ_QUEUE}`)
+      if (err != null) {
+        throw new Error(err)
+      }
+      ch.assertQueue(MQ_QUEUE, {durable: true})
+      cb(err, ch)
+    }
+    conn.createChannel(on_open)
+  })
+}
+
+// Set to true if in the middle of processing a crash report, false otherwise
+var processing = false
+
+// Heroku processes are restarted every X minutes (we need to timeout if not processing)
+setInterval(() => {
+  if (!processing) {
+    console.log('Timeout - closing')
+    process.exit()
+  }
+}, TIMEOUT)
+
+// This is triggered when connections to all resources are established
+const resourcesReady = function (asyncError, resources) {
+  if (asyncError) {
+    throw new Error(asyncError.toString())
+  }
+
+  // Write crash report meta data to Elastic Search (Kibana)
+  const writeToElasticSearch = function (id, contents, cb) {
+    resources.es.create({
+      index: ES_INDEX,
+      type: ES_TYPE,
+      id: id,
+      body: contents
+    }, cb)
+  }
+
+  // Write crash report meta data to Postgres
+  const writeToPostgres = function (id, contents, cb) {
+    resources.pg.query(
+      'INSERT INTO dtl.crashes (id, contents) VALUES($1, $2)',
+      [id, JSON.stringify(contents)],
+      cb
+    )
+  }
+
+  // Start listening for messages
+  console.log('All resources available')
+  console.log('Reading messages from AMQP')
+  resources.ch.consume(MQ_QUEUE, (msg) => {
+    // We received a crash report, start processing
+    processing = true
+    var msgContents = JSON.parse(msg.content.toString())
+    console.log(msgContents)
+
+    // Read crash report from S3 and parse with minidump
+    // (which handles Symbol substitution)
+    mini.readAndParse(msgContents._id, (miniError, crashReport, metadata) => {
+      crashReport = crashReport.toString()
+
+      // install the parser minidump metadata into the crash report
+      msgContents.metadata = metadata
+
+      writeToPostgres(
+        msgContents._id,
+        msgContents,
+        function(pgErr, results) {
+          if (pgErr) {
+            console.log(pgErr.toString())
+          }
+          console.log(`Written to Postgres [${msgContents._id}]`)
+
+          writeToElasticSearch(
+            msgContents._id,
+            // We need to store the crash in a 'crash' attribute because
+            // the _ver field collides with ElasticSearch
+            { crash: msgContents },
+            function (esErr, response) {
+              if (esErr) {
+                console.log(esErr.toString())
+              }
+              console.log(`Indexed in Elastic Search [${msgContents._id}]`)
+              // Everything is done, ack the message and
+              // signal finished processing
+              resources.ch.ack(msg)
+              processing = false
+            }
+          )
+        })
+    })
+  })
+}
+
+// Startup, connect to all required resources and start processing
+async.parallel({
+  es: connectElasticSearch,
+  pg: pgc.setup,
+  ch: connectAMQP
+}, resourcesReady)
