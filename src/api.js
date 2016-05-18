@@ -3,6 +3,7 @@ var assert = require('assert')
 
 var dataset = require('./dataset')
 var retriever = require('./retriever')
+var crash = require('./crash')
 
 const DELTA = `
 SELECT
@@ -473,6 +474,21 @@ exports.setup = (server, client, mongo) => {
           results.rows.forEach((row) => formatPGRow(row))
           results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/crash_report',
+    handler: function (request, reply) {
+      var id = request.query.id
+      crash.parsedCrash(client, id, (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          reply(results)
         }
       })
     }

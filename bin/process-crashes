@@ -9,12 +9,11 @@ const pgc = require('../dist/pgc')
 const mini = require('../dist/mini')
 
 // RabbitMQ connection parameters
-const MQ_HOST = process.env.MQ_HOST || 'localhost'
+const MQ_URL = process.env.RABBITMQ_BIGWIG_RX_URL || process.env.AMQP_URL || 'amqp://localhost:5672'
 const MQ_QUEUE = process.env.MQ_QUEUE || 'crashes'
 
 // ElasticSearch connection parameters
-const ES_HOST = process.env.ES_HOST || 'localhost'
-const ES_PORT = process.env.ES_PORT || 9200
+const ES_URL = process.env.SEARCHBOX_URL || 'localhost:9200'
 const ES_INDEX = process.env.ES_INDEX || 'crashes'
 const ES_TYPE = process.env.ES_TYPE || 'crash'
 
@@ -24,7 +23,7 @@ const TIMEOUT = process.env.TIMEOUT || 60000
 // Connect to Elastic Search at a host and port
 const connectElasticSearch = function(cb) {
   var es = new elasticsearch.Client({
-    host: `${ES_HOST}:${ES_PORT}`,
+    host: ES_URL,
     log: null
   })
   cb(null, es)
@@ -32,7 +31,7 @@ const connectElasticSearch = function(cb) {
 
 // Connect to messaging system and return a communication channel
 const connectAMQP = function(cb) {
-  var amqpConnectionString = 'amqp://' + MQ_HOST + ':5672'
+  var amqpConnectionString = MQ_URL
   console.log('Connecting to AMQP server at ' + amqpConnectionString)
   amqp.connect(amqpConnectionString, (err, conn) => {
     if (err != null) {
