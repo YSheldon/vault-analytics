@@ -7,6 +7,7 @@
 const async = require('async')
 const amqp = require('amqplib/callback_api')
 const elasticsearch = require('elasticsearch')
+const uuid = require('uuid')
 
 const pgc = require('../dist/pgc')
 const mini = require('../dist/mini')
@@ -89,6 +90,11 @@ const resourcesReady = function (asyncError, resources) {
     )
   }
 
+  // Setup message throttling
+  const CONSUMER_TAG = uuid.v4()
+  const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES || 1)
+  var msgCount = 0
+
   // Start listening for messages
   console.log('All resources available')
   console.log('Reading messages from AMQP')
@@ -97,6 +103,16 @@ const resourcesReady = function (asyncError, resources) {
     processing = true
     var msgContents = JSON.parse(msg.content.toString())
     console.log(msgContents)
+
+    msgCount += 1
+    // Check here for max messages
+    if (msgCount > MAX_MESSAGES) {
+      console.log('Max message count reached - closing queue till next run')
+      resources.ch.cancel(CONSUMER_TAG, function (err) {
+        console.log('Closed')
+      })
+      return;
+    }
 
     // Read crash report from S3 and parse with minidump
     // (which handles Symbol substitution)
@@ -133,7 +149,7 @@ const resourcesReady = function (asyncError, resources) {
           )
         })
     })
-  })
+  }, { consumerTag: CONSUMER_TAG })
 }
 
 // Startup, connect to all required resources and start processing
