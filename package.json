@@ -8,7 +8,8 @@
     "build": "babel src --out-dir dist --source-maps",
     "preinstall": "babel src --out-dir dist --source-maps",
     "lint": "standard",
-    "postinstall": "bower cache clean && bower install"
+    "postinstall": "bower cache clean && bower install",
+    "test": "tap test/*.js"
   },
   "author": "Brave Software",
   "license": "ISC",
@@ -43,7 +44,8 @@
     "yargs": "^3.31.0"
   },
   "devDependencies": {
-    "standard": "^5.4.1"
+    "standard": "^5.4.1",
+    "tap": "^6.1.1"
   },
   "precommit": [
     "lint"

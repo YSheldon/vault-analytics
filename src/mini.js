@@ -19,6 +19,24 @@ AWS.config.update({
   sslEnabled: true
 })
 
+// Walk the stack for an existing file and extract metadata
+exports.fileDumpHandler = (filename, cb) => {
+  return () => {
+    // Walk the stack generating the plain text crash report
+    minidump.walkStack(filename, require('electron-debug-symbols').paths , (err, results) => {
+      var metadata = {}
+      if (results) {
+        // Retrieve metadata from the plain text minidump
+        metadata = exports.parsePlainTextMinidump(results.toString())
+      } else {
+        console.log('Note: Invalid crash report - no metadata extracted')
+      }
+      // Pass through the error the crash dump and the extracted metadata
+      cb(err, results || "", metadata)
+    })
+  }
+}
+
 // Retrieve a binary minidump file from S3, parse it, and
 // substitute symbols
 exports.readAndParse = (id, cb) => {
@@ -30,17 +48,9 @@ exports.readAndParse = (id, cb) => {
   var filename = '/tmp/' + id
   var file = require('fs').createWriteStream(filename)
 
-  var done = () => {
-    minidump.walkStack(filename, require('electron-debug-symbols').paths , (err, results) => {
-      // Retrieve metadata from the plain text minidump
-      var metadata = exports.parsePlainTextMinidump(results.toString())
-      cb(err, results, metadata)
-    })
-  }
-
   s3.getObject(params).
     on('httpData', function(chunk) { file.write(chunk) }).
-    on('httpDone', done).
+    on('httpDone', exports.fileDumpHandler(filename, cb)).
     send()
 }
 
