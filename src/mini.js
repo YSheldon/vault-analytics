@@ -48,6 +48,8 @@ exports.readAndParse = (id, cb) => {
   var filename = '/tmp/' + id
   var file = require('fs').createWriteStream(filename)
 
+  console.log('Reading dump file from bucket ' + S3_CRASH_BUCKET + ' with id ' + id)
+
   s3.getObject(params).
     on('httpData', function(chunk) { file.write(chunk) }).
     on('httpDone', exports.fileDumpHandler(filename, cb)).

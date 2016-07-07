@@ -26,6 +26,7 @@ const TIMEOUT = process.env.TIMEOUT || 60000
 
 // Connect to Elastic Search at a host and port
 const connectElasticSearch = function(cb) {
+  console.log('Connecting to ElasticSearch at ' + ES_URL)
   var es = new elasticsearch.Client({
     host: ES_URL,
     log: null
@@ -96,7 +97,7 @@ const resourcesReady = function (asyncError, resources) {
   var msgCount = 0
 
   // Start listening for messages
-  console.log('All resources available')
+  console.log('All resources available. Processing a maximum of ' + MAX_MESSAGES + ' crash reports.')
   console.log('Reading messages from AMQP')
   resources.ch.consume(MQ_QUEUE, (msg) => {
     // We received a crash report, start processing
@@ -107,11 +108,8 @@ const resourcesReady = function (asyncError, resources) {
     msgCount += 1
     // Check here for max messages
     if (msgCount > MAX_MESSAGES) {
-      console.log('Max message count reached - closing queue till next run')
-      resources.ch.cancel(CONSUMER_TAG, function (err) {
-        console.log('Closed')
-      })
-      return;
+      resources.ch.cancel(CONSUMER_TAG)
+      return
     }
 
     // Read crash report from S3 and parse with minidump
