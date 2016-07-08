@@ -44,6 +44,9 @@ pgc.setup(function (err, client) {
         return model.usageUpserter(client, row)
       })
 
+      console.log('[OK] Retrieved results from Mongo')
+      console.log('Updating ' + results.length + ' rows in Postgres')
+
       // Insert / Update the exceptions
       funcs.push(makeExceptionsUpserter(client))
 
