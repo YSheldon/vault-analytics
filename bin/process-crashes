@@ -24,6 +24,9 @@ const ES_TYPE = process.env.ES_TYPE || 'crash'
 // Number of milliseconds for this process to run before timing out
 const TIMEOUT = process.env.TIMEOUT || 60000
 
+// Count of records indexed in ES
+var indexedCount = 0
+
 // Connect to Elastic Search at a host and port
 const connectElasticSearch = function(cb) {
   console.log('Connecting to ElasticSearch at ' + ES_URL)
