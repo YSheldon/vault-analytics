@@ -1,64 +1,55 @@
 #!/usr/bin/env node
-var db = require('../dist/mongoc')
-var retriever = require('../dist/retriever')
-var model = require('../dist/model')
-
 var async = require('async')
 var _ = require('underscore')
 var fs = require('fs')
+var path = require('path')
+
+var mongoc = require('../dist/mongoc')
+var retriever = require('../dist/retriever')
+var model = require('../dist/model')
+var reporter = require('../dist/reporter')
 var pgc = require('../dist/pgc')
 
-// Read a list of exception records to be added to the aggregation stream
-// These can be used for external data sources not directly available,
-// or for missing data segments. See misc/ folder for exceptions format.
-var exceptions = []
-if (fs.existsSync('./data/usage.json')) {
-  JSON.parse(fs.readFileSync('./data/usage.json'))
-}
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
 
-// Also read exceptions from a table and insert / update
-var exceptionsSQL = 'INSERT INTO dw.fc_usage ( ymd, platform, version, first_time, channel, total ) SELECT ymd, platform, version, first_time, channel, total from dw.fc_usage_exceptions ON CONFLICT (ymd, platform, version, first_time, channel ) DO UPDATE SET total = EXCLUDED.total'
+console.log('Update daily totals for laptop - ' + jobName)
 
-var makeExceptionsUpserter = function (client) {
-  return function (cb) {
-    client.query(exceptionsSQL, [], function (err, result) {
-      cb(err)
+// This is triggered when all resources have valid connections
+var resourcesReady = function(asyncError, resources) {
+  var cleanup = function () {
+    // Close connections to Postgres and Mongo
+    resources.pg.end()
+    resources.mg.close()
+  }
+
+  console.log('Connected to Mongo')
+  // Retrieve the daily active user stats
+  retriever.dailyActiveUsersFullGrouped(resources.mg, [], function(err, results) {
+    // Build funcs to execute
+    var funcs = _.map(results, function(row) {
+      return model.usageUpserter(resources.pg, row)
     })
-  }
-}
 
-// Connect to postgres
-pgc.setup(function (err, client) {
-  if (err) {
-    throw new Error(err)
-  }
-  console.log('Update daily totals for laptop')
-  console.log('[OK] Connected to postgres')
+    console.log('Retrieved results from Mongo')
+    console.log('Updating ' + results.length + ' rows in Postgres')
 
-  db.setup(function(err, connection) {
-    console.log('[OK] Connected to mongo')
-    // Retrieve the daily active user stats
-    retriever.dailyActiveUsersFullGrouped(connection, exceptions, function(err, results) {
-      // Build funcs to execute
-      var funcs = _.map(results, function(row) {
-        return model.usageUpserter(client, row)
-      })
+    // Insert / Update the exceptions
+    funcs.push(model.exceptionsUpserter(resources.pg))
 
-      console.log('[OK] Retrieved results from Mongo')
-      console.log('Updating ' + results.length + ' rows in Postgres')
-
-      // Insert / Update the exceptions
-      funcs.push(makeExceptionsUpserter(client))
-
-      // Insert rows
-      async.series(funcs, function(err, results) {
-        if (err) {
-          throw new Error(err)
-        }
-        console.log('Done')
-        client.end()
-        connection.close()
-      })
+    // Insert rows
+    async.series(funcs, function(err, results) {
+      if (err) {
+        throw new Error(err)
+      }
+      // Report the results of the job run
+      reporter.shutdown(runInfo, resources.pg, cleanup)
     })
   })
-})
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup,
+  mg: mongoc.setup
+}, resourcesReady)

@@ -21,3 +21,16 @@ exports.crashUpserter = function (client, row) {
     })
   }
 }
+
+// Also read exceptions from a table and insert / update
+var exceptionsSQL = 'INSERT INTO dw.fc_usage ( ymd, platform, version, first_time, channel, total ) SELECT ymd, platform, version, first_time, channel, total from dw.fc_usage_exceptions ON CONFLICT (ymd, platform, version, first_time, channel ) DO UPDATE SET total = EXCLUDED.total'
+
+exports.exceptionsUpserter = function (client) {
+  return function (cb) {
+    client.query(exceptionsSQL, [], function (err, result) {
+      console.log("Updating exceptions")
+      cb(err)
+    })
+  }
+}
+

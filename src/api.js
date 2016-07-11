@@ -1,5 +1,6 @@
 var _ = require('underscore')
 var assert = require('assert')
+var moment = require('moment')
 
 var dataset = require('./dataset')
 var retriever = require('./retriever')
@@ -194,6 +195,13 @@ WHERE
   FC.channel = ANY ($3)
 GROUP BY FC.ymd, FC.platform || ' ' || FC.version
 ORDER BY FC.ymd DESC, FC.platform || ' ' || FC.version
+`
+
+const JOB_STATUS = `
+SELECT run_id, ts, id, duration
+FROM dtl.runinfo RI
+WHERE
+  ts = ( SELECT MAX(ts) FROM dtl.runinfo WHERE id = RI.id )
 `
 
 const formatPGRow = (row) => {
@@ -474,6 +482,26 @@ exports.setup = (server, client, mongo) => {
           results.rows.forEach((row) => formatPGRow(row))
           results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/job_status',
+    handler: function (request, reply) {
+      var jobName = null
+      client.query(JOB_STATUS, [], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          var rows = results.rows.map((row) => {
+            row.ago = moment(row.ts).fromNow()
+            row.duration = parseFloat(row.duration || 0)
+            return row
+          })
+          reply(rows)
         }
       })
     }
