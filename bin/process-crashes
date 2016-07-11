@@ -61,7 +61,7 @@ var processing = false
 // Heroku processes are restarted every X minutes (we need to timeout if not processing)
 setInterval(() => {
   if (!processing) {
-    console.log('Timeout - closing')
+    console.log('Timeout - ' + indexedCount + ' records processed')
     process.exit()
   }
 }, TIMEOUT)
@@ -103,7 +103,6 @@ const resourcesReady = function (asyncError, resources) {
     // We received a crash report, start processing
     processing = true
     var msgContents = JSON.parse(msg.content.toString())
-    console.log(msgContents)
 
     msgCount += 1
     // Check here for max messages
@@ -138,6 +137,7 @@ const resourcesReady = function (asyncError, resources) {
               if (esErr) {
                 console.log(esErr.toString())
               }
+              indexedCount += 1
               console.log(`Indexed in Elastic Search [${msgContents._id}]`)
               // Everything is done, ack the message and
               // signal finished processing
