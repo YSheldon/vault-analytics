@@ -8,9 +8,15 @@ const async = require('async')
 const amqp = require('amqplib/callback_api')
 const elasticsearch = require('elasticsearch')
 const uuid = require('uuid')
+var path = require('path')
 
 const pgc = require('../dist/pgc')
 const mini = require('../dist/mini')
+
+const reporter = require('../dist/reporter')
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
 
 // RabbitMQ connection parameters
 const MQ_URL = process.env.RABBITMQ_BIGWIG_RX_URL || process.env.AMQP_URL || 'amqp://localhost:5672'
@@ -61,19 +67,22 @@ const connectAMQP = function(cb) {
 // Set to true if in the middle of processing a crash report, false otherwise
 var processing = false
 
-// Heroku processes are restarted every X minutes (we need to timeout if not processing)
-setInterval(() => {
-  if (!processing) {
-    console.log('Timeout - ' + indexedCount + ' records processed')
-    process.exit()
-  }
-}, TIMEOUT)
 
 // This is triggered when connections to all resources are established
 const resourcesReady = function (asyncError, resources) {
   if (asyncError) {
     throw new Error(asyncError.toString())
   }
+
+  // Heroku processes are restarted every X minutes (we need to timeout if not processing)
+  setInterval(() => {
+    if (!processing) {
+      console.log('Timeout - ' + indexedCount + ' records processed')
+      reporter.shutdown(runInfo, resources.pg, function () {
+        process.exit()
+      })
+    }
+  }, TIMEOUT)
 
   // Write crash report meta data to Elastic Search (Kibana)
   const writeToElasticSearch = function (id, contents, cb) {
