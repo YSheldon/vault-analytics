@@ -27,6 +27,7 @@ exports.fileDumpHandler = (filename, cb) => {
       var metadata = {}
       if (results) {
         // Retrieve metadata from the plain text minidump
+        console.log('walked')
         metadata = exports.parsePlainTextMinidump(results.toString())
       } else {
         console.log(err)
@@ -54,6 +55,11 @@ exports.readAndParse = (id, cb) => {
   s3.getObject(params).
     on('httpData', function(chunk) { file.write(chunk) }).
     on('httpDone', exports.fileDumpHandler(filename, cb)).
+    on('error', function(err) {
+      console.log("Error retrieving crash report from S3")
+      throw new Error(err)
+      cb(err)
+    }).
     send()
 }
 
