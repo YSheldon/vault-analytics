@@ -60,7 +60,7 @@
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
           <h1 class="page-header" id="contentTitle">{{name}}</h1>
 
-          <div>
+          <div id="controls">
             <nav class="navbar navbar-default">
               <div class="container-fluid">
                 <form class="navbar-form navbar-left" role="search">
@@ -179,10 +179,24 @@
                 </tbody>
               </table>
             </div>
-
           </div>
 
-
+          <div id="crash-detail">
+            <div id="crash-download-container">
+            </div>
+            <table class="table table-striped" id="crash-detail-table">
+              <thead>
+                <tr>
+                  <th>Identifier</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+            <pre id="crash-detail-stack">
+            </pre>
+          </div>
 
         </div>
       </div>

@@ -63,6 +63,30 @@ exports.readAndParse = (id, cb) => {
     send()
 }
 
+// Retrieve a binary minidump file from S3
+exports.readAndStore = (id, cb) => {
+  var s3 = new AWS.S3()
+  var params = {
+    Bucket: S3_CRASH_BUCKET,
+    Key: id
+  }
+  var filename = '/tmp/' + id
+  var file = require('fs').createWriteStream(filename)
+
+  console.log('Reading dump file from bucket ' + S3_CRASH_BUCKET + ' with id ' + id)
+
+  s3.getObject(params).
+    on('httpData', function(chunk) { file.write(chunk) }).
+    on('httpDone', function() { cb(filename) }).
+    on('error', function(err) {
+      console.log("Error retrieving crash report from S3")
+      throw new Error(err)
+      cb(err)
+    }).
+    send()
+}
+
+
 // Keys and regexps for retrieving pieces of information from the
 // plain text minidump
 var grabbers = [

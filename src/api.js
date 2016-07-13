@@ -5,6 +5,7 @@ var moment = require('moment')
 var dataset = require('./dataset')
 var retriever = require('./retriever')
 var crash = require('./crash')
+var mini = require('./mini')
 
 const DELTA = `
 SELECT
@@ -561,6 +562,18 @@ exports.setup = (server, client, mongo) => {
           results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
+      })
+    }
+  })
+
+  // Download a crash report
+  server.route({
+    method: 'GET',
+    path: '/download/crash_report/{id}',
+    handler: function (request, reply) {
+      mini.readAndStore(request.params.id, (filename) => {
+        console.log("Downloading " + request.params.id + ', ' + filename)
+        reply.file(filename)
       })
     }
   })

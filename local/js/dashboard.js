@@ -421,6 +421,7 @@ $("#daysSelector").on('change', function (evt, value) {
 
 // Update page based on current state
 var updatePageUIState = function() {
+  $("#controls").show()
   _.keys(menuItems).forEach(function(id) {
     if (id !== pageState.currentlySelected) {
       $("#" + id).parent().removeClass("active")
@@ -541,11 +542,23 @@ $("#btn-show-today").on('change', function() {
   refreshData()
 })
 
+// Display a single crash report
 router.get('crash/:id', function(req) {
   pageState.currentlySelected = null
   $.ajax('/api/1/crash_report?id=' + req.params.id, {
     success: function(crash) {
+      $("#controls").hide()
+      $("#contentTitle").html("Crash Report " + req.params.id)
       console.log(crash)
+      var table = $('#crash-detail-table tbody')
+      table.empty()
+      _.each(_.keys(crash.crash.contents).sort(), function (k) {
+        if (!_.isObject(crash.crash.contents[k])) {
+          table.append('<tr><td>' + k + '</td><td>' + crash.crash.contents[k] + '</td></tr>')
+        }
+      })
+      $('#crash-detail-stack').html(crash.crash_report)
+      $('#crash-download-container').html("<a class='btn btn-primary' href='/download/crash_report/" + req.params.id + "'>Download</a>")
     }
   })
 })
