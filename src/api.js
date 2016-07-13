@@ -204,6 +204,29 @@ WHERE
   ts = ( SELECT MAX(ts) FROM dtl.runinfo WHERE id = RI.id )
 `
 
+const CRASH_REPORTS = `
+SELECT
+  contents->>'year_month_day'           AS ymd,
+  contents->>'_version'                 AS version,
+  contents->>'platform'                 AS platform,
+  contents->'metadata'->>'crash_reason' AS crash_reason,
+  count(*)                              AS total
+FROM dtl.crashes
+WHERE
+  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL) AND
+  contents->>'platform' = ANY ($2)
+GROUP BY
+  contents->>'platform',
+  contents->'metadata'->>'crash_reason',
+  contents->>'year_month_day',
+  contents->>'_version'
+ORDER BY
+  contents->>'platform',
+  contents->'metadata'->>'crash_reason',
+  contents->>'year_month_day',
+  contents->>'_version'
+`
+
 const formatPGRow = (row) => {
   if (row.count) {
     row.count = parseInt(row.count, 10)
@@ -250,7 +273,7 @@ const potentiallyFilterThisMonth = (rows, showMonth) => {
   return rows
 }
 
-let allPlatforms = ['osx', 'winx64', 'winia32', 'ios', 'android', 'unknown', 'linux']
+let allPlatforms = ['osx', 'winx64', 'winia32', 'ios', 'android', 'unknown', 'linux', 'darwin']
 let allChannels = ['dev', 'beta', 'stable']
 
 let platformPostgresArray = (platformFilter) => {
@@ -517,6 +540,26 @@ exports.setup = (server, client, mongo) => {
           reply(err.toString()).code(500)
         } else {
           reply(results)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/crash_reports',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10)
+      days += ' days'
+      let platforms = platformPostgresArray(request.query.platformFilter)
+      let channels = channelPostgresArray(request.query.channelFilter)
+      client.query(CRASH_REPORTS, [days, platforms], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => formatPGRow(row))
+          results.rows = potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
         }
       })
     }

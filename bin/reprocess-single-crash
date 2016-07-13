@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/*
+
+  Read and re-parse crash reporting metadata from S3 crash report
+
+*/
+
+const pgc = require('../dist/pgc')
+const mini = require('../dist/mini')
+
+// Retrieve id from argument list
+var id = process.argv[2]
+if (!id) {
+  throw new Error("id must be first argument")
+}
+
+// Connect to Postgres
+pgc.setup(function(err, pg) {
+  if (err) {
+    throw new Error(err)
+  }
+  console.log("Connected")
+
+  // Retrieve the specific crash report
+  pg.query("SELECT * FROM dtl.crashes WHERE id = $1", [id], function(queryError, results) {
+    if (queryError) {
+      throw new Error(queryError)
+    }
+    if (results.rows.length === 0) {
+      throw new Error("No crash report with that id")
+    }
+    
+    // Get the crash report component from the record
+    var dump = results.rows[0].contents
+    console.log(dump)
+
+    // Retrieve from the S3 and stack walk the crash report
+    mini.readAndParse(id, function (miniError, crashReport, metadata) {
+      if (miniError) {
+        throw new Error(miniError)
+      }
+      console.log(metadata)
+      dump.metadata = metadata
+      // If there is metadata, save it to Postgres
+      if (metadata) {
+        pg.query("UPDATE dtl.crashes SET contents = $1 WHERE id = $2", [dump, id], function (updateError) {
+          if (updateError) {
+            throw new Error(updateError)
+          }
+          console.log("Metadata updated - done")
+          pg.end()
+        })
+      } else {
+        pg.end()
+      }
+    })
+  })
+})

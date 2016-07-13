@@ -4,8 +4,8 @@
 var minidump = require('minidump')
 var AWS = require('aws-sdk')
 
-const S3_CRASH_BUCKET = process.env.S3_CRASH_BUCKET || 'crashes'
-const S3_CRASH_REGION = process.env.S3_CRASH_REGION || 'us-east-1'
+const S3_CRASH_BUCKET = process.env.S3_CRASH_BUCKET || 'brave-laptop-crash-reports'
+const S3_CRASH_REGION = process.env.S3_CRASH_REGION || 'us-west-2'
 
 if (!process.env.S3_CRASH_KEY || !process.env.S3_CRASH_SECRET) {
   throw new Error('S3_CRASH_KEY and S3_CRASH_SECRET should be set to the S3 account credentials for storing crash reports')
@@ -29,6 +29,7 @@ exports.fileDumpHandler = (filename, cb) => {
         // Retrieve metadata from the plain text minidump
         metadata = exports.parsePlainTextMinidump(results.toString())
       } else {
+        console.log(err)
         console.log('Note: Invalid crash report - no metadata extracted')
       }
       // Pass through the error the crash dump and the extracted metadata
