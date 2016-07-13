@@ -1,3 +1,4 @@
+
 // High contrast color palette (https://github.com/mbostock/d3/wiki/Ordinal-Scales#categorical-colors)
 var colors = [
   [31, 119, 180],  // 1f77b4
@@ -538,4 +539,13 @@ _.forEach(channelKeys, function(id) {
 $("#btn-show-today").on('change', function() {
   pageState.showToday = this.checked
   refreshData()
+})
+
+router.get('crash/:id', function(req) {
+  pageState.currentlySelected = null
+  $.ajax('/api/1/crash_report?id=' + req.params.id, {
+    success: function(crash) {
+      console.log(crash)
+    }
+  })
 })
