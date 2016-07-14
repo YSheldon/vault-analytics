@@ -48,6 +48,18 @@ ORDER BY
   contents->>'_version'
 `
 
+const CRASH_REPORT_DETAILS = `
+SELECT
+  id,
+  contents->>'year_month_day'         AS ymd,
+  contents->>'_version'               AS version,
+  contents->>'platform'               AS platform,
+  COALESCE(contents->'metadata'->>'crash_reason', contents->'metadata'->>'assertion', 'Unknown') AS crash_reason
+FROM dtl.crashes
+ORDER BY ts DESC
+LIMIT 50
+`
+
 const CRASHES_PLATFORM = `
 SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
@@ -127,6 +139,25 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/crash_report_details',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10)
+      days += ' days'
+      let platforms = common.platformPostgresArray(request.query.platformFilter)
+      let channels = common.channelPostgresArray(request.query.channelFilter)
+      client.query(CRASH_REPORT_DETAILS, [], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
           reply(results.rows)
         }
       })

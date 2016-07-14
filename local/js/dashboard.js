@@ -562,3 +562,18 @@ router.get('crash/:id', function(req) {
     }
   })
 })
+
+// Display a list of crash reports
+router.get('crash_list', function(req) {
+  $.ajax('/api/1/crash_report_details', {
+    success: function(crashes) {
+      $("#controls").show()
+      $("#contentTitle").html("Crash Reports")
+      var table = $('#crash-list-table tbody')
+      table.empty()
+      _.each(crashes, function(crash) {
+        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td>' + crash.ymd + '</td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.crash_reason + '</td></tr>')
+      })
+    }
+  })
+})
