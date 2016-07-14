@@ -130,6 +130,7 @@ const resourcesReady = function (asyncError, resources) {
 
       // install the parser minidump metadata into the crash report
       msgContents.metadata = metadata
+      console.log(metadata)
 
       writeToPostgres(
         msgContents._id,

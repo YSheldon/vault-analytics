@@ -57,6 +57,7 @@ exports.readAndParse = (id, delay, cb) => {
   s3.getObject(params).
     on('httpData', function(chunk) { file.write(chunk) }).
     on('httpDone', function() {
+      console.log('Delaying processing by ' + delay)
       setTimeout(function () {
         exports.fileDumpHandler(filename, cb)()
       }, delay)
