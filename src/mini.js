@@ -6,6 +6,7 @@ var AWS = require('aws-sdk')
 
 const S3_CRASH_BUCKET = process.env.S3_CRASH_BUCKET || 'brave-laptop-crash-reports'
 const S3_CRASH_REGION = process.env.S3_CRASH_REGION || 'us-west-2'
+const WALK_DELAY = parseInt(process.env.WALK_DELAY || 2000)
 
 if (!process.env.S3_CRASH_KEY || !process.env.S3_CRASH_SECRET) {
   throw new Error('S3_CRASH_KEY and S3_CRASH_SECRET should be set to the S3 account credentials for storing crash reports')
@@ -41,7 +42,8 @@ exports.fileDumpHandler = (filename, cb) => {
 
 // Retrieve a binary minidump file from S3, parse it, and
 // substitute symbols
-exports.readAndParse = (id, cb) => {
+exports.readAndParse = (id, delay, cb) => {
+  delay = delay || WALK_DELAY
   var s3 = new AWS.S3()
   var params = {
     Bucket: S3_CRASH_BUCKET,
@@ -54,7 +56,11 @@ exports.readAndParse = (id, cb) => {
 
   s3.getObject(params).
     on('httpData', function(chunk) { file.write(chunk) }).
-    on('httpDone', exports.fileDumpHandler(filename, cb)).
+    on('httpDone', function() {
+      setTimeout(function () {
+        exports.fileDumpHandler(filename, cb)()
+      }, delay)
+    }).
     on('error', function(err) {
       console.log("Error retrieving crash report from S3")
       throw new Error(err)
