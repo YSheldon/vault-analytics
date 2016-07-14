@@ -1,10 +1,20 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+let _ = require('underscore')
+
 let Hapi = require('hapi')
 let Inert = require('inert')
 let assert = require('assert')
 let async = require('async')
 
 let ui = require('./ui')
-let api = require('./api')
+
+// API Endpoints
+let jobs = require('./api/jobs')
+let stats = require('./api/stats')
+let crashes = require('./api/crashes')
 
 let setGlobalHeader = require('hapi-set-header')
 
@@ -14,6 +24,7 @@ let config = require('../config/config.' + profile + '.js')
 let pgc = require('./pgc')
 let mgc = require('./mongoc')
 
+// This is fired after all resources connected
 let kickoff = (err, connections) => {
   if (err) {
     throw new Error(err)
@@ -34,8 +45,8 @@ let kickoff = (err, connections) => {
     console.error(e)
   })
 
-  // Setup the API
-  api.setup(server, connections.pg, connections.mg)
+  // Setup the APIs
+  _.each([stats, jobs, crashes], (api) => { api.setup(server, connections.pg, connections.mg) })
 
   // Setup the UI for the dashboard
   ui.setup(server)
@@ -46,7 +57,7 @@ let kickoff = (err, connections) => {
   })
 }
 
-// Connect to postgres and mongo
+// Connect to Postgres and Mongo
 async.parallel(
   {
     pg: pgc.setup,
@@ -54,4 +65,3 @@ async.parallel(
   },
   kickoff
 )
-
