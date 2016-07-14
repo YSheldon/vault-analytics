@@ -125,7 +125,7 @@ const resourcesReady = function (asyncError, resources) {
 
     // Read crash report from S3 and parse with minidump
     // (which handles Symbol substitution)
-    mini.readAndParse(msgContents._id, (miniError, crashReport, metadata) => {
+    mini.readAndParse(msgContents._id, null, (miniError, crashReport, metadata) => {
       crashReport = crashReport.toString()
 
       // install the parser minidump metadata into the crash report
