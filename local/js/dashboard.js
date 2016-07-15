@@ -1,4 +1,3 @@
-
 // High contrast color palette (https://github.com/mbostock/d3/wiki/Ordinal-Scales#categorical-colors)
 var colors = [
   [31, 119, 180],  // 1f77b4
@@ -255,7 +254,8 @@ var contents = [
   "crashesContent",
   "overviewContent",
   "statsContent",
-  "topCrashContent"
+  "topCrashContent",
+  "recentCrashContent"
 ]
 
 var serializePlatformParams = function () {
@@ -335,6 +335,19 @@ var topCrashesRetriever = function() {
   })
 }
 
+var recentCrashesRetriever = function() {
+  $.ajax('/api/1/recent_crash_report_details?' + standardParams(), {
+    success: function(crashes) {
+      $("#contentTitle").html("Recent Crash Reports")
+      var table = $('#recent-crash-list-table tbody')
+      table.empty()
+      _.each(crashes, function(crash) {
+        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td>' + crash.ymd + '</td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.crash_reason + '</td></tr>')
+      })
+    }
+  })
+}
+
 var crashesRetriever = function() {
   $.ajax('/api/1/dc_platform?' + standardParams(), {
     success: usageCrashesHandler
@@ -403,6 +416,11 @@ var menuItems = {
     title: "Top Crashes By Platform and Version",
     show: "topCrashContent",
     retriever: topCrashesRetriever
+  },
+  "mnRecentCrashes": {
+    title: "Recent Crashes",
+    show: "recentCrashContent",
+    retriever: recentCrashesRetriever
   },
   "mnCrashes": {
     title: "Daily Crashes by Platform",
@@ -540,6 +558,12 @@ router.get('top_crashes', function(req) {
   $('#crash-list-table').hide()
 })
 
+router.get('recent_crashes', function(req) {
+  pageState.currentlySelected = 'mnRecentCrashes'
+  updatePageUIState()
+  refreshData()
+})
+
 router.get('crashes_platform_detail/:ymd/:platform', function(req) {
   pageState.currentlySelected = 'mnCrashesDetails'
   updatePageUIState()
@@ -582,17 +606,24 @@ router.get('crashes_platform', function(req) {
 // Display a single crash report
 router.get('crash/:id', function(req) {
   pageState.currentlySelected = 'mnTopCrashes'
+  updatePageUIState()
   // Show and hide sub-sections
   $('#top-crash-table').hide()
   $('#crash-detail').show()
   $('#crash-list-table').hide()
   pageState.currentlySelected = null
+
+  var table = $('#crash-detail-table tbody')
+  $("#contentTitle").html('Loading...')
+  table.empty()
+  $('#crash-download-container').empty()
+  $('#crash-detail-stack').empty()
+
   $.ajax('/api/1/crash_report?id=' + req.params.id, {
     success: function(crash) {
       $("#controls").hide()
       $("#contentTitle").html("Crash Report " + req.params.id)
       console.log(crash)
-      var table = $('#crash-detail-table tbody')
       table.empty()
       _.each(_.keys(crash.crash.contents).sort(), function (k) {
         if (!_.isObject(crash.crash.contents[k])) {

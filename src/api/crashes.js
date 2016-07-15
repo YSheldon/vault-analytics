@@ -41,12 +41,25 @@ ORDER BY
   COUNT(*) DESC
 `
 
+const RECENT_CRASH_REPORT_DETAILS = `
+SELECT
+  id,
+  contents->>'year_month_day'                                AS ymd,
+  contents->>'_version'                                      AS version,
+  contents->>'platform'                                      AS platform,
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason
+FROM dtl.crashes
+WHERE
+  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL)
+ORDER BY ts DESC
+`
+
 const CRASH_REPORT_DETAILS = `
 SELECT
   id,
-  contents->>'year_month_day'         AS ymd,
-  contents->>'_version'               AS version,
-  contents->>'platform'               AS platform,
+  contents->>'year_month_day'                                AS ymd,
+  contents->>'_version'                                      AS version,
+  contents->>'platform'                                      AS platform,
   COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason
 FROM dtl.crashes
 WHERE
@@ -149,6 +162,24 @@ exports.setup = (server, client, mongo) => {
       days += ' days'
       console.log(request.query)
       client.query(CRASH_REPORT_DETAILS, [request.query.platform, request.query.version, days, request.query.crash_reason], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/recent_crash_report_details',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10)
+      days += ' days'
+      console.log(request.query)
+      client.query(RECENT_CRASH_REPORT_DETAILS, [days], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {
