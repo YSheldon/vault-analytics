@@ -3,7 +3,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 var _ = require('underscore')
-var assert = require('assert')
 
 var retriever = require('../retriever')
 var crash = require('../crash')
@@ -27,25 +26,19 @@ ORDER BY FC.ymd DESC, FC.platform || ' ' || FC.version
 
 const CRASH_REPORTS = `
 SELECT
-  contents->>'year_month_day'           AS ymd,
   contents->>'_version'                 AS version,
   contents->>'platform'                 AS platform,
   contents->'metadata'->>'crash_reason' AS crash_reason,
-  count(*)                              AS total
+  COUNT(*)                              AS total
 FROM dtl.crashes
 WHERE
-  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL) AND
-  contents->>'platform' = ANY ($2)
+  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL)
 GROUP BY
+  contents->>'_version',
   contents->>'platform',
-  contents->'metadata'->>'crash_reason',
-  contents->>'year_month_day',
-  contents->>'_version'
+  contents->'metadata'->>'crash_reason'
 ORDER BY
-  contents->>'platform',
-  contents->'metadata'->>'crash_reason',
-  contents->>'year_month_day',
-  contents->>'_version'
+  COUNT(*) DESC
 `
 
 const CRASH_REPORT_DETAILS = `
@@ -54,10 +47,14 @@ SELECT
   contents->>'year_month_day'         AS ymd,
   contents->>'_version'               AS version,
   contents->>'platform'               AS platform,
-  COALESCE(contents->'metadata'->>'crash_reason', contents->'metadata'->>'assertion', 'Unknown') AS crash_reason
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason
 FROM dtl.crashes
+WHERE
+  contents->>'platform' = $1 AND
+  contents->>'_version' = $2 AND
+TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($3 as INTERVAL) AND
+  contents->'metadata'->>'crash_reason' = $4
 ORDER BY ts DESC
-LIMIT 50
 `
 
 const CRASHES_PLATFORM = `
@@ -133,12 +130,11 @@ exports.setup = (server, client, mongo) => {
       days += ' days'
       let platforms = common.platformPostgresArray(request.query.platformFilter)
       let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(CRASH_REPORTS, [days, platforms], (err, results) => {
+      client.query(CRASH_REPORTS, [days], (err, results) => {
         if (err) {
+          console.log(err)
           reply(err.toString()).code(500)
         } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
         }
       })
@@ -151,9 +147,8 @@ exports.setup = (server, client, mongo) => {
     handler: function (request, reply) {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(CRASH_REPORT_DETAILS, [], (err, results) => {
+      console.log(request.query)
+      client.query(CRASH_REPORT_DETAILS, [request.query.platform, request.query.version, days, request.query.crash_reason], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {

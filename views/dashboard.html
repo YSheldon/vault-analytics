@@ -1,229 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <link rel="icon" href="http://brave.com/favicon.ico">
-
-    <title>Dashboard</title>
-
-    <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/local/css/dashboard.css" rel="stylesheet">
-  </head>
+  {{> head }}
   <body>
-    <nav class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/">Brave</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse" aria-expanded="false" style="height: 1px;">
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="/logout">Logout</a></li>
-          </ul>
-          <form class="navbar-form navbar-right">
-            <input type="text" class="form-control" placeholder="Search...">
-          </form>
-        </div>
-      </div>
-    </nav>
-
+    {{> navbar }}
     <div class="container-fluid">
       <div class="row">
-        <div class="col-sm-3 col-md-2 sidebar">
-          <ul class="nav nav-sidebar">
-            <li><a href="#overview" id="mnOverview">Overview <span class="sr-only">(current)</span></a></li>
-            <li><a href="#usage_month_agg" id="mnUsageMonthAgg">Monthly Active Users (MAU)</a></li>
-            <li><a href="#usage_month" id="mnUsageMonth">Monthly Active Users by Platform (MAU)</a></li>
-            <li><a href="#usage_agg" id="mnUsageAgg">Daily Active Users (DAU)</a></li>
-            <li><a href="#usage" id="mnUsage">Daily Active Users by Platform (DAU)</a></li>
-            <li><a href="#usage_returning" id="mnUsageReturning">Daily Returning Active Users by Platform (DAU)</a></li>
-            <li><a href="#versions" id="mnVersions">Daily Active Users by Version (DAU)</a></li>
-            <li><a href="#daily_new" id="mnDailyNew">Daily New Users by Platform (DNU)</a></li>
-            <li><a href="#daily_usage_stats" id="mnDailyUsageStats">Daily Usage Stats</a></li>
-          </ul>
-          <ul class="nav nav-sidebar">
-            <li><a href="#crashes_platform" id="mnCrashes">Daily Crashes by Platform</a></li>
-            <li><a href="#crashes_platform_version" id="mnCrashesVersion">Daily Crashes by Version</a></li>
-          </ul>
-        </div>
+        {{> sidebar }}
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
           <h1 class="page-header" id="contentTitle">{{name}}</h1>
 
-          <div id="controls">
-            <nav class="navbar navbar-default">
-              <div class="container-fluid">
-                <form class="navbar-form navbar-left" role="search">
-                  <div class="form-group">
-                    <select class="form-control" id="daysSelector">
-                      <option value="10000">All</option>
-                      <option value="60">60 Days</option>
-                      <option value="30">30 Days</option>
-                      <option value="14" selected>14 Days</option>
-                      <option value="7">7 Days</option>
-                    </select>
-                  </div>
-
-                  <div class="btn-group" data-toggle="buttons">
-                    <label class="btn btn-default">
-                      <input type="checkbox" autocomplete="off" id="btn-filter-osx"> osx
-                    </label>
-                    <label class="btn btn-default">
-                      <input type="checkbox" autocomplete="off" id="btn-filter-winia32"> winia32
-                    </label>
-                    <label class="btn btn-default">
-                      <input type="checkbox" autocomplete="off" id="btn-filter-winx64"> winx64
-                    </label>
-                    <label class="btn btn-default">
-                      <input type="checkbox" autocomplete="off" id="btn-filter-android"> android
-                    </label>
-                    <label class="btn btn-default">
-                      <input type="checkbox" autocomplete="off"  id="btn-filter-ios"> ios
-                    </label>
-                  </div>
-
-                  <div class="btn-group" data-toggle="buttons">
-                    <label class="btn btn-default active">
-                      <input type="checkbox" autocomplete="off" id="btn-channel-dev" checked> dev
-                    </label>
-                    <label class="btn btn-default">
-                      <input type="checkbox" autocomplete="off" id="btn-channel-beta"> beta
-                    </label>
-                    <label class="btn btn-default active">
-                      <input type="checkbox" autocomplete="off" id="btn-channel-stable" checked> stable
-                    </label>
-                  </div>
-
-                  <div class="btn-group" data-toggle="buttons">
-                    <label class="btn btn-default">
-                      <input type="checkbox" autocomplete="off" id="btn-show-today"> Today / This Month
-                    </label>
-                  </div>
-
-                </form>
-              </div>
-            </nav>
-          </div>
+          {{> controls }}
 
           <div id="overviewContent" style="display: none;">
+            {{> overviewContent }}
           </div>
 
           <div id="usageContent" style="display: none;">
-
-            <div>
-              <div id="usageChartContainer">
-                <canvas id="usageChart"
-                        height="300"
-                        width="800"></canvas>
-              </div>
-              <span id="usageChartLegend"
-                    class="line-legend pull-right"
-                    height="300"
-                    width="150"></span>
-            </div>
-
-            <div class="table-responsive">
-              <table class="table" id="usageDataTable">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>O/S</th>
-                    <th class="text-right">Unique</th>
-                  </tr>
-                </thead>
-                <tbody>
-                </tbody>
-              </table>
-            </div>
-
+            {{> usageContent }}
           </div>
 
           <div id="statsContent" style="display: none;">
-
-            <div>
-              <div id="statsChartContainer">
-                <canvas id="statsChart"
-                        height="300"
-                        width="800"></canvas>
-              </div>
-              <span id="statsChartLegend"
-                    class="line-legend pull-right"
-                    height="300"
-                    width="150"></span>
-            </div>
-
-            <div class="table-responsive">
-              <table class="table" id="statsDataTable">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th class="text-right">Daily Active Users</th>
-                    <th class="text-right">DAU Yesterday</th>
-                    <th class="text-right">DAU Delta</th>
-                    <th class="text-right">DAU Delta %</th>
-                    <th class="text-right">New Users</th>
-                    <th class="text-right">DAU Delta / New Users</th>
-                  </tr>
-                </thead>
-                <tbody>
-                </tbody>
-              </table>
-            </div>
+            {{> statsContent }}
           </div>
 
-          <div id="crashContent">
-            <div id="crash-download-container">
-            </div>
-            <table class="table table-striped" id="crash-detail-table">
-              <thead>
-                <tr>
-                  <th>Identifier</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-              </tbody>
-            </table>
-            <pre id="crash-detail-stack">
-            </pre>
-          </div>
-
-          <div id="crashListContent">
-            <table class="table table-striped" id="crash-list-table">
-              <thead>
-                <tr>
-                  <th>Id</th>
-                  <th>YMD</th>
-                  <th>Version</th>
-                  <th>Platform</th>
-                  <th>Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-              </tbody>
-            </table>
+          <div id="topCrashContent" style="display: none;">
+            {{> topCrashTable }}
+            {{> crashListTable }}
+            {{> crashDetail }}
           </div>
 
         </div>
       </div>
     </div>
-
-    <script src="/jquery/jquery.min.js"></script>
-    <script src="/bootstrap/js/bootstrap.min.js"></script>
-    <script src="/bower/Chart.js/Chart.js"></script>
-    <script src="/bower/underscore/underscore-min.js"></script>
-    <script src="/bower/grapnel/dist/grapnel.min.js"></script>
-    <script src="/local/js/dashboard.js"></script>
-
+    {{> jsIncludes }}
   </body>
 </html>

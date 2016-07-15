@@ -31,6 +31,7 @@ exports.setup = (server) => {
       isCached: shouldCache,
       relativeTo: path.join(__dirname, '..'),
       path: './views',
+      partialsPath: './views/partials',
       layoutPath: './views/layout',
       helpersPath: './views/helpers'
     })

@@ -80,6 +80,21 @@ var round = function (x, n) {
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
 }
 
+var topCrashHandler = function(rows) {
+  var table = $('#top-crash-table tbody')
+  table.empty()
+  rows.forEach(function (row) {
+    var params = [row.platform, row.version, pageState.days, encodeURIComponent(row.crash_reason)].join('/')
+    var buf = '<tr>'
+    buf = buf + '<td class="text-right"><a href="#crash_list/' + params + '">' + row.total + '</a></td>'
+    buf = buf + '<td class="text-left">' + row.platform + '</td>'
+    buf = buf + '<td class="text-left">' + row.version + '</td>'
+    buf = buf + '<td class="text-left">' + row.crash_reason + '</td>'
+    buf = buf + '</tr>'
+    table.append(buf)
+  })
+}
+
 var statsHandler = function(rows) {
   // Build the table
   var table = $('#statsDataTable tbody')
@@ -143,7 +158,6 @@ var statsHandler = function(rows) {
 // Build a handler for a successful API request
 var buildSuccessHandler = function (x, y, x_label, y_label, count_link_func) {
   if (!count_link_func) {
-    console.log("Defining custom link_func")
     count_link_func = function(row, count) {
       return count
     }
@@ -240,7 +254,8 @@ var contents = [
   "usageContent",
   "crashesContent",
   "overviewContent",
-  "statsContent"
+  "statsContent",
+  "topCrashContent"
 ]
 
 var serializePlatformParams = function () {
@@ -314,6 +329,12 @@ var DUSRetriever = function() {
   })
 }
 
+var topCrashesRetriever = function() {
+  $.ajax('/api/1/crash_reports?' + standardParams(), {
+    success: topCrashHandler
+  })
+}
+
 var crashesRetriever = function() {
   $.ajax('/api/1/dc_platform?' + standardParams(), {
     success: usageCrashesHandler
@@ -378,6 +399,11 @@ var menuItems = {
     show: "usageContent",
     retriever: versionsRetriever
   },
+  "mnTopCrashes": {
+    title: "Top Crashes By Platform and Version",
+    show: "topCrashContent",
+    retriever: topCrashesRetriever
+  },
   "mnCrashes": {
     title: "Daily Crashes by Platform",
     show: "usageContent",
@@ -440,6 +466,7 @@ var updatePageUIState = function() {
   })
 }
 
+// Load data for the selected item
 var refreshData = function() {
   if (menuItems[pageState.currentlySelected]) {
     menuItems[pageState.currentlySelected].retriever()
@@ -449,10 +476,11 @@ var refreshData = function() {
 // Setup menu handler routes
 var router = new Grapnel()
 
-router.get('|overview', function(req) {
+/*router.get('|overview', function(req) {
+  console.log('overview')
   pageState.currentlySelected = 'mnOverview'
   updatePageUIState()
-})
+})*/
 
 router.get('versions', function(req) {
   pageState.currentlySelected = 'mnVersions'
@@ -502,14 +530,17 @@ router.get('usage_agg', function(req) {
   refreshData()
 })
 
-router.get('crashes_platform', function(req) {
-  pageState.currentlySelected = 'mnCrashes'
+router.get('top_crashes', function(req) {
+  pageState.currentlySelected = 'mnTopCrashes'
   updatePageUIState()
   refreshData()
+    // Show and hide sub-sections
+  $('#top-crash-table').show()
+  $('#crash-detail').hide()
+  $('#crash-list-table').hide()
 })
 
 router.get('crashes_platform_detail/:ymd/:platform', function(req) {
-  console.log("crashes_platform_detail")
   pageState.currentlySelected = 'mnCrashesDetails'
   updatePageUIState()
   //refreshData()
@@ -542,8 +573,19 @@ $("#btn-show-today").on('change', function() {
   refreshData()
 })
 
+router.get('crashes_platform', function(req) {
+  pageState.currentlySelected = 'mnCrashes'
+  updatePageUIState()
+  refreshData()
+})
+
 // Display a single crash report
 router.get('crash/:id', function(req) {
+  pageState.currentlySelected = 'mnTopCrashes'
+  // Show and hide sub-sections
+  $('#top-crash-table').hide()
+  $('#crash-detail').show()
+  $('#crash-list-table').hide()
   pageState.currentlySelected = null
   $.ajax('/api/1/crash_report?id=' + req.params.id, {
     success: function(crash) {
@@ -564,10 +606,20 @@ router.get('crash/:id', function(req) {
 })
 
 // Display a list of crash reports
-router.get('crash_list', function(req) {
-  $.ajax('/api/1/crash_report_details', {
+router.get('crash_list/:platform/:version/:days/:crash_reason', function(req) {
+  pageState.currentlySelected = 'mnTopCrashes'
+  // Show and hide sub-sections
+  $('#top-crash-table').hide()
+  $('#crash-detail').hide()
+  $('#crash-list-table').show()
+  var params = $.param({
+    platform: req.params.platform,
+    version: req.params.version,
+    days: req.params.days,
+    crash_reason: req.params.crash_reason
+  })
+  $.ajax('/api/1/crash_report_details?' + params, {
     success: function(crashes) {
-      $("#controls").show()
       $("#contentTitle").html("Crash Reports")
       var table = $('#crash-list-table tbody')
       table.empty()

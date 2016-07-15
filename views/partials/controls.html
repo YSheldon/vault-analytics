@@ -1,0 +1,54 @@
+<div id="controls">
+  <nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <form class="navbar-form navbar-left" role="search">
+        <div class="form-group">
+          <select class="form-control" id="daysSelector">
+            <option value="10000">All</option>
+            <option value="60">60 Days</option>
+            <option value="30">30 Days</option>
+            <option value="14" selected>14 Days</option>
+            <option value="7">7 Days</option>
+          </select>
+        </div>
+
+        <div class="btn-group" data-toggle="buttons">
+          <label class="btn btn-default">
+            <input type="checkbox" autocomplete="off" id="btn-filter-osx"> osx
+          </label>
+          <label class="btn btn-default">
+            <input type="checkbox" autocomplete="off" id="btn-filter-winia32"> winia32
+          </label>
+          <label class="btn btn-default">
+            <input type="checkbox" autocomplete="off" id="btn-filter-winx64"> winx64
+          </label>
+          <label class="btn btn-default">
+            <input type="checkbox" autocomplete="off" id="btn-filter-android"> android
+          </label>
+          <label class="btn btn-default">
+            <input type="checkbox" autocomplete="off"  id="btn-filter-ios"> ios
+          </label>
+        </div>
+
+        <div class="btn-group" data-toggle="buttons">
+          <label class="btn btn-default active">
+            <input type="checkbox" autocomplete="off" id="btn-channel-dev" checked> dev
+          </label>
+          <label class="btn btn-default">
+            <input type="checkbox" autocomplete="off" id="btn-channel-beta"> beta
+          </label>
+          <label class="btn btn-default active">
+            <input type="checkbox" autocomplete="off" id="btn-channel-stable" checked> stable
+          </label>
+        </div>
+
+        <div class="btn-group" data-toggle="buttons">
+          <label class="btn btn-default">
+            <input type="checkbox" autocomplete="off" id="btn-show-today"> Today / This Month
+          </label>
+        </div>
+
+      </form>
+    </div>
+  </nav>
+</div>
