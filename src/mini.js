@@ -93,21 +93,19 @@ exports.readAndStore = (id, cb) => {
     send()
 }
 
-
-// Keys and regexps for retrieving pieces of information from the
-// plain text minidump
-var grabbers = [
-  ['crash_reason', new RegExp('^Crash reason: (.*)\n', 'gm')],
-  ['crash_address', new RegExp('^Crash address: (.*)\n', 'gm')],
-  ['assertion', new RegExp('^Assertion: (.*)\n', 'gm')],
-  ['process_uptime', new RegExp('^Process uptime: (.*)\n', 'gm')],
-  ['operating_system', new RegExp('^Operating system: (.*)\n', 'gm')],
-  ['cpu', new RegExp('^CPU: (.*)\n', 'gm')]
-]
-
 // Grab bits of information from the plain text minidump
 // file and return in an object using the grabber regexp
 exports.parsePlainTextMinidump = (contents) => {
+  // Keys and regexps for retrieving pieces of information from the
+  // plain text minidump
+  var grabbers = [
+    ['crash_reason', new RegExp('^Crash reason: (.*)\n', 'gm')],
+    ['crash_address', new RegExp('^Crash address: (.*)\n', 'gm')],
+    ['assertion', new RegExp('^Assertion: (.*)\n', 'gm')],
+    ['process_uptime', new RegExp('^Process uptime: (.*)\n', 'gm')],
+    ['operating_system', new RegExp('^Operating system: (.*)\n', 'gm')],
+    ['cpu', new RegExp('^CPU: (.*)\n', 'gm')]
+  ]
   var results = {}
   grabbers.forEach((grabber) => {
     var match = grabber[1].exec(contents)

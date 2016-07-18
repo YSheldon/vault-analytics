@@ -18,22 +18,34 @@ var crashReport = "Crash reason: Some Reason\n\nAssertion: Some assertion\nCPU: 
 var meta = mini.parsePlainTextMinidump(crashReport)
 tap.ok(meta.crash_reason === 'Some Reason', 'grabbers working as expected')
 
-// Async test for successfully parsing crash dump
-tap.test('Parse existing crash dump', function (childTest) {
+// Async test for successfully parsing win32 crash dump
+tap.test('Parse existing win32 crash dump', function (childTest) {
   mini.fileDumpHandler('./test/fixtures/dumps/56c5e4ef2a335d11003ceeef', function (err, crashReport, metadata) {
-    tap.ok(crashReport, 'crash report generated')
-    tap.ok(_.isObject(metadata), 'metadata is an object')
-    tap.ok(metadata.crash_reason, 'Crash reason extracted')
+    childTest.ok(crashReport, 'crash report generated')
+    childTest.ok(_.isObject(metadata), 'metadata is an object')
+    childTest.ok(metadata.crash_reason, 'Crash reason extracted')
+    childTest.ok(metadata.crash_address === '0x30', 'Crash address extracted')
+    childTest.end()
+  })()
+})
+
+// Async test for successfully parsing linux crash dump
+tap.test('Parse existing linux crash dump', function (childTest) {
+  mini.fileDumpHandler('./test/fixtures/dumps/578d22d769ba5c1100e09713', function (err, crashReport, metadata) {
+    childTest.ok(crashReport, 'crash report generated')
+    childTest.ok(_.isObject(metadata), 'metadata is an object')
+    childTest.ok(metadata.crash_reason, 'Crash reason extracted')
+    childTest.equal(metadata.operating_system, 'Linux', 'operating_system extracted')
     childTest.end()
   })()
 })
 
 // Async test for unsuccessfully parsing crash dump
-tap.test('Parse existing crash dump', function (childTest) {
+tap.test('Parse invalid crash dump', function (childTest) {
   mini.fileDumpHandler('./test/fixtures/dumps/XXX', function (err, crashReport, metadata) {
-    tap.ok(crashReport === '', 'crash report not generated')
-    tap.ok(_.isObject(metadata), 'metadata is an object')
-    tap.ok(metadata.crash_reason === undefined, 'Crash reason not extracted')
+    childTest.ok(crashReport === '', 'crash report not generated')
+    childTest.ok(_.isObject(metadata), 'metadata is an object')
+    childTest.ok(metadata.crash_reason === undefined, 'Crash reason not extracted')
     childTest.end()
   })()
 })
