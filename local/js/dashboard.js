@@ -83,11 +83,12 @@ var topCrashHandler = function(rows) {
   var table = $('#top-crash-table tbody')
   table.empty()
   rows.forEach(function (row) {
-    var params = [row.platform, row.version, pageState.days, encodeURIComponent(row.crash_reason)].join('/')
+    var params = [row.platform, row.version, pageState.days, encodeURIComponent(row.crash_reason), row.cpu].join('/')
     var buf = '<tr>'
     buf = buf + '<td class="text-right"><a href="#crash_list/' + params + '">' + row.total + '</a></td>'
-    buf = buf + '<td class="text-left">' + row.platform + '</td>'
     buf = buf + '<td class="text-left">' + row.version + '</td>'
+    buf = buf + '<td class="text-left">' + row.platform + '</td>'
+    buf = buf + '<td class="text-left">' + row.cpu + '</td>'
     buf = buf + '<td class="text-left">' + row.crash_reason + '</td>'
     buf = buf + '</tr>'
     table.append(buf)
@@ -342,7 +343,7 @@ var recentCrashesRetriever = function() {
       var table = $('#recent-crash-list-table tbody')
       table.empty()
       _.each(crashes, function(crash) {
-        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td>' + crash.ymd + '</td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.crash_reason + '</td></tr>')
+        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td>' + crash.ymd + '</td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.cpu + '</td><td>' + crash.crash_reason + '</td></tr>')
       })
     }
   })
@@ -637,7 +638,7 @@ router.get('crash/:id', function(req) {
 })
 
 // Display a list of crash reports
-router.get('crash_list/:platform/:version/:days/:crash_reason', function(req) {
+router.get('crash_list/:platform/:version/:days/:crash_reason/:cpu', function(req) {
   pageState.currentlySelected = 'mnTopCrashes'
   // Show and hide sub-sections
   $('#top-crash-table').hide()
@@ -647,7 +648,8 @@ router.get('crash_list/:platform/:version/:days/:crash_reason', function(req) {
     platform: req.params.platform,
     version: req.params.version,
     days: req.params.days,
-    crash_reason: req.params.crash_reason
+    crash_reason: req.params.crash_reason,
+    cpu: req.params.cpu
   })
   $.ajax('/api/1/crash_report_details?' + params, {
     success: function(crashes) {
@@ -655,7 +657,7 @@ router.get('crash_list/:platform/:version/:days/:crash_reason', function(req) {
       var table = $('#crash-list-table tbody')
       table.empty()
       _.each(crashes, function(crash) {
-        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td>' + crash.ymd + '</td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.crash_reason + '</td></tr>')
+        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td>' + crash.ymd + '</td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.cpu + '</td><td>' + crash.crash_reason + '</td></tr>')
       })
     }
   })

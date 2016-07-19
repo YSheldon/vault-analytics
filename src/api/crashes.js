@@ -29,6 +29,7 @@ SELECT
   contents->>'_version'                 AS version,
   contents->>'platform'                 AS platform,
   contents->'metadata'->>'crash_reason' AS crash_reason,
+  contents->'metadata'->>'cpu'          AS cpu,
   COUNT(*)                              AS total
 FROM dtl.crashes
 WHERE
@@ -36,7 +37,8 @@ WHERE
 GROUP BY
   contents->>'_version',
   contents->>'platform',
-  contents->'metadata'->>'crash_reason'
+  contents->'metadata'->>'crash_reason',
+  contents->'metadata'->>'cpu'
 ORDER BY
   COUNT(*) DESC
 `
@@ -47,6 +49,7 @@ SELECT
   contents->>'year_month_day'                                AS ymd,
   contents->>'_version'                                      AS version,
   contents->>'platform'                                      AS platform,
+  COALESCE(contents->'metadata'->>'cpu', 'Unknown')          AS cpu,
   COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason
 FROM dtl.crashes
 WHERE
@@ -60,13 +63,15 @@ SELECT
   contents->>'year_month_day'                                AS ymd,
   contents->>'_version'                                      AS version,
   contents->>'platform'                                      AS platform,
+  COALESCE(contents->'metadata'->>'cpu', 'Unknown')          AS cpu,
   COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason
 FROM dtl.crashes
 WHERE
   contents->>'platform' = $1 AND
   contents->>'_version' = $2 AND
-TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($3 as INTERVAL) AND
-  contents->'metadata'->>'crash_reason' = $4
+  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($3 as INTERVAL) AND
+  contents->'metadata'->>'crash_reason' = $4 AND
+  contents->'metadata'->>'cpu' = $5
 ORDER BY ts DESC
 `
 
@@ -161,7 +166,7 @@ exports.setup = (server, client, mongo) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       console.log(request.query)
-      client.query(CRASH_REPORT_DETAILS, [request.query.platform, request.query.version, days, request.query.crash_reason], (err, results) => {
+      client.query(CRASH_REPORT_DETAILS, [request.query.platform, request.query.version, days, request.query.crash_reason, request.query.cpu], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {
