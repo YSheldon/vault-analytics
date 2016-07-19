@@ -28,7 +28,6 @@ exports.fileDumpHandler = (filename, cb) => {
       var metadata = {}
       if (results) {
         // Retrieve metadata from the plain text minidump
-        console.log('walked')
         metadata = exports.parsePlainTextMinidump(results.toString())
       } else {
         console.log(err)

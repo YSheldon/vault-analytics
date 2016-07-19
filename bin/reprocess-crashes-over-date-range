@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/*
+
+  Read and re-parse crash reporting metadata from S3 crash reports
+  over a specified date range (that do not contain a crash reason)
+
+*/
+
+const async = require('async')
+const util = require('util')
+
+const pgc = require('../dist/pgc')
+const mini = require('../dist/mini')
+
+var start = process.argv[2]
+var end = process.argv[3]
+var limit = parseInt(process.argv[4] || 10)
+
+if (!(start && end)) {
+  throw new Error('start and end dates in yyyy-mm-dd must be provided as the first two parameters')
+}
+
+// Build a crash processing function
+function buildProcessCrashReporter (pg, id, contents) {
+  return function (cb) {
+    // Retrieve from the S3 and stack walk the crash report
+    mini.readAndParse(id, 1, function (miniError, crashReport, metadata) {
+      if (miniError) {
+        cb(miniError)
+        return
+      }
+      console.log(util.inspect(metadata))
+      contents.metadata = metadata
+      // If there is metadata, save it to Postgres
+      if (metadata) {
+        pg.query("UPDATE dtl.crashes SET contents = $1 WHERE id = $2", [contents, id], function (updateError) {
+          if (updateError) {
+            cb(updateError)
+            return
+          }
+          cb(null)
+        })
+      } else {
+        cb(null)
+      }
+    })
+  }
+}
+
+// Connect to Postgres
+pgc.setup(function(err, pg) {
+  if (err) {
+    throw new Error(err)
+  }
+  console.log("Connected")
+
+  // find unprocessed crash reports within a date range
+  pg.query("select * from dtl.crashes where contents->'metadata'->>'crash_reason' is null and contents->>'year_month_day' >= $1 and contents->>'year_month_day' <= $2 order by ts asc", [start, end], function (queryError, results) {
+    if (queryError) {
+      throw new Error(queryError)
+    }
+    if (results.rows.length === 0) {
+      throw new Error("No unprocessed crash reports in that date range")
+    }
+
+    console.log(results.rows.length + ' unprocessed crash reports in this date range. Processing ' + limit + '.')
+    
+    // Limit to a set number of records
+    if (results.rows.length > limit) {
+      results.rows = results.rows.slice(0, limit)
+    }
+
+    // build function handlers
+    var funcs = results.rows.map(function (row) {
+      return buildProcessCrashReporter(pg, row.id, row.contents)
+    })
+
+    // execute the function handlers and exit
+    async.series(funcs, function (asyncError, results) {
+      if (asyncError) {
+        throw new Error(asyncError)
+      }
+      console.log('Done')
+      pg.end()
+    })
+  })
+})
