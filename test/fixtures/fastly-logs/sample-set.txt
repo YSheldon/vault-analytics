@@ -1,0 +1,9 @@
+<134>2016-06-06T02:00:00Z cache-lax1432 laptop-updates[337132]: 200 /1/releases/dev/0.10.0/winx64?daily=true&weekly=false&monthly=false&first=false US 801
+<134>2016-06-06T02:00:00Z cache-iad2122 laptop-updates[337132]: 200 /1/releases/dev/0.10.0/osx?daily=false&weekly=false&monthly=false&first=false US 825
+<134>2016-06-06T02:00:00Z cache-iad2129 laptop-updates[337132]: 204 /1/releases/dev/0.10.2/osx?daily=false&weekly=false&monthly=false&first=false CA 0
+<134>2016-06-06T02:00:00Z cache-ams4139 laptop-updates[337132]: 200 /1/releases/dev/0.10.0/winx64?daily=true&weekly=true&monthly=false&first=false SE 0
+<134>2016-06-06T02:00:00Z cache-iad2138 laptop-updates[337132]: 204 /1/releases/dev/0.10.2/winx64?daily=false&weekly=false&monthly=false&first=false US 506
+<134>2016-06-06T02:00:00Z cache-lhr6331 laptop-updates[337132]: 200 /1/releases/dev/0.10.0/winx64?daily=true&weekly=true&monthly=false&first=false IN 0
+<134>2016-06-06T02:00:00Z cache-dfw1845 laptop-updates[337132]: 204 /1/releases/dev/0.10.2/osx?daily=false&weekly=false&monthly=false&first=false US 635
+<134>2016-06-06T02:00:00Z cache-atl6235 laptop-updates[337132]: 204 /1/releases/dev/0.10.2/winx64?daily=false&weekly=false&monthly=false&first=false US 528
+<134>2016-06-06T02:00:00Z cache-jfk1029 laptop-updates[337132]: 200 /1/releases/dev/0.10.0/winia32?daily=true&weekly=false&monthly=false&first=false US 611
