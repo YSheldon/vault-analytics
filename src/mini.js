@@ -116,3 +116,29 @@ exports.parsePlainTextMinidump = (contents) => {
   })
   return results
 }
+
+const windowsVersionMatchers = [
+  ['5.0', 'Windows 2000'],
+  ['5.1', 'Windows XP or Windows XP 64-Bit Edition Version 2002 (Itanium)'],
+  ['5.2', 'Windows Server 2003 or Windows XP x64 Edition (AMD64/EM64T) or Windows XP 64-Bit Edition Version 2003 (Itanium)'],
+  ['6.0.6000', 'Windows Vista'],
+  ['6.0.6001', 'Windows Vista SP1 or Windows Server 2008'],
+  ['6.1.7600', 'Windows 7 or Windows Server 2008 R2'],
+  ['6.1.7601', 'Windows 7 SP1 or Windows Server 2008 R2 SP1'],
+  ['6.2', 'Windows 8 or Windows Server 2012'],
+  ['6.3.92', 'Windows 8.1 or Windows Server 2012 R2'],
+  ['6.3.96', 'Windows 8.1 with Update 1'],
+  ['10', 'Windows 10']
+]
+
+// Match a Windows operating system version to a label
+export function matchWindowsOperatingSystem (os) {
+  var matches = windowsVersionMatchers.filter((matcher) => {
+    return os.match(new RegExp(`^${matcher[0]}`))
+  })
+  if (matches.length) {
+    return matches[0][1]
+  } else {
+    return null
+  }
+}

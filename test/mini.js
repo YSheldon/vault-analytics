@@ -49,3 +49,10 @@ tap.test('Parse invalid crash dump', function (childTest) {
     childTest.end()
   })()
 })
+
+tap.test('Windows OS version', function (childTest) {
+  childTest.equal(mini.matchWindowsOperatingSystem('6.1.7600'), 'Windows 7 or Windows Server 2008 R2', 'Exact match')
+  childTest.equal(mini.matchWindowsOperatingSystem('5.1.0056'), 'Windows XP or Windows XP 64-Bit Edition Version 2002 (Itanium)', 'partial match')
+  childTest.equal(mini.matchWindowsOperatingSystem('9.0'), null, 'no match')
+  childTest.end()
+})
