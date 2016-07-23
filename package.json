@@ -24,7 +24,7 @@
     "bootstrap": "^3.3.6",
     "bower": "^1.7.2",
     "elasticsearch": "^11.0.1",
-    "electron-debug-symbols": "^2.0.1",
+    "electron-debug-symbols": "brave/electron-debug-symbols",
     "glob": "^6.0.1",
     "handlebars": "^4.0.5",
     "hapi": "^11.1.2",

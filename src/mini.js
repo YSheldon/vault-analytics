@@ -24,7 +24,8 @@ AWS.config.update({
 exports.fileDumpHandler = (filename, cb) => {
   return () => {
     // Walk the stack generating the plain text crash report
-    minidump.walkStack(filename, require('electron-debug-symbols').paths , (err, results) => {
+    var symbolPaths = require('electron-debug-symbols').paths()
+    minidump.walkStack(filename, symbolPaths, (err, results) => {
       var metadata = {}
       if (results) {
         // Retrieve metadata from the plain text minidump
