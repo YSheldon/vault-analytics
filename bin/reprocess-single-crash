@@ -34,7 +34,7 @@ pgc.setup(function(err, pg) {
     if (results.rows.length === 0) {
       throw new Error("No crash report with that id")
     }
-    
+
     // Get the crash report component from the record
     var dump = results.rows[0].contents
     console.log(dump)
@@ -44,7 +44,11 @@ pgc.setup(function(err, pg) {
       if (miniError) {
         throw new Error(miniError)
       }
+
+      // Output to the console for debugging
+      console.log(crashReport)
       console.log(metadata)
+
       dump.metadata = metadata
       // If there is metadata, save it to Postgres
       if (metadata) {

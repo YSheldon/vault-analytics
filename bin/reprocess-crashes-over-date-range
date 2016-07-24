@@ -60,7 +60,7 @@ pgc.setup(function(err, pg) {
   console.log("Connected")
 
   // find unprocessed crash reports within a date range
-  pg.query("select * from dtl.crashes where contents->'metadata'->>'crash_reason' is null and contents->>'year_month_day' >= $1 and contents->>'year_month_day' <= $2 order by ts asc", [start, end], function (queryError, results) {
+  pg.query("select * from dtl.crashes where contents->>'year_month_day' >= $1 and contents->>'year_month_day' <= $2 order by ts asc", [start, end], function (queryError, results) {
     if (queryError) {
       throw new Error(queryError)
     }

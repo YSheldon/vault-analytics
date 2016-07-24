@@ -3,10 +3,11 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 var minidump = require('minidump')
 var AWS = require('aws-sdk')
+var _ = require('underscore')
 
 const S3_CRASH_BUCKET = process.env.S3_CRASH_BUCKET || 'brave-laptop-crash-reports'
 const S3_CRASH_REGION = process.env.S3_CRASH_REGION || 'us-west-2'
-const WALK_DELAY = parseInt(process.env.WALK_DELAY || 2000)
+const WALK_DELAY = parseInt(process.env.WALK_DELAY || 1)
 
 if (!process.env.S3_CRASH_KEY || !process.env.S3_CRASH_SECRET) {
   throw new Error('S3_CRASH_KEY and S3_CRASH_SECRET should be set to the S3 account credentials for storing crash reports')
@@ -20,23 +21,80 @@ AWS.config.update({
   sslEnabled: true
 })
 
+function signature (signatureTokens) {
+  var signatureReason = signatureTokens[0][2] || signatureTokens[0][3] || signatureTokens[0][6] || signatureTokens[0][7]
+  for (let line of signatureTokens) {
+    if (line[2].match(/^(brave|libnode|node)/i)) {
+      if (line[3]) {
+        return line[3]
+      }
+    }
+  }
+  return signatureReason
+}
+
+exports.metadataFromMachineCrash = (crash) => {
+  var lines = crash.split(/\n/)
+  var osTokens = lines[0].split('|')
+  var cpuTokens = lines[1].split('|')
+  var crashTokens = lines[2].split('|')
+
+  var threadLines = (lines.filter((line) => {
+    return line.match(new RegExp("^" + crashTokens[3]))
+  }) || []).map((line) => {
+    return line.split('|')
+  })
+
+  return {
+    signature: signature(threadLines),
+    operating_system: osTokens[1],
+    operating_system_version: osTokens[2],
+    operating_system_name: matchWindowsOperatingSystem(osTokens[2]),
+    cpu: cpuTokens[1],
+    cpu_family: cpuTokens[2],
+    cpu_count: cpuTokens[3],
+    crash_reason: crashTokens[1],
+    crash_address: crashTokens[2],
+    crash_thread: crashTokens[3]
+  }
+}
+
+// Unfortunately we have to walk the stack twice
+// to parse a crash report - once to retrieve the
+// symbol substituted plain text and once to
+// retrieve the metadata
+exports.parseCrashHandler = (filename, cb) => {
+  const symbolPaths = require('electron-debug-symbols').paths()
+
+  const readPlainText = (plainTextCallback) => {
+    minidump.walkStack(filename, symbolPaths, (err, results) => {
+      results = results || ''
+      plainTextCallback(err, results.toString())
+    }, { machine: false })
+  }
+
+  const readMetadata = (metadataCallback) => {
+    minidump.walkStack(filename, symbolPaths, (err, results) => {
+      results = results || ''
+      var metadata = {}
+      if (results) {
+        metadata = exports.metadataFromMachineCrash(results.toString())
+      }
+      metadataCallback(err, metadata)
+    }, { machine: true })
+  }
+
+  readPlainText((plainTextErr, plainText) => {
+    readMetadata((metadataErr, metadata) => {
+      cb(plainTextErr || metadataErr, plainText, metadata)
+    })
+  })
+}
+
 // Walk the stack for an existing file and extract metadata
 exports.fileDumpHandler = (filename, cb) => {
   return () => {
-    // Walk the stack generating the plain text crash report
-    var symbolPaths = require('electron-debug-symbols').paths()
-    minidump.walkStack(filename, symbolPaths, (err, results) => {
-      var metadata = {}
-      if (results) {
-        // Retrieve metadata from the plain text minidump
-        metadata = exports.parsePlainTextMinidump(results.toString())
-      } else {
-        console.log(err)
-        console.log('Note: Invalid crash report - no metadata extracted')
-      }
-      // Pass through the error the crash dump and the extracted metadata
-      cb(err, results || "", metadata)
-    })
+    exports.parseCrashHandler(filename, cb)
   }
 }
 
@@ -93,42 +151,14 @@ exports.readAndStore = (id, cb) => {
     send()
 }
 
-// Grab bits of information from the plain text minidump
-// file and return in an object using the grabber regexp
-exports.parsePlainTextMinidump = (contents) => {
-  // Keys and regexps for retrieving pieces of information from the
-  // plain text minidump
-  var grabbers = [
-    ['crash_reason', new RegExp('^Crash reason: (.*)\n', 'gm')],
-    ['crash_address', new RegExp('^Crash address: (.*)\n', 'gm')],
-    ['assertion', new RegExp('^Assertion: (.*)\n', 'gm')],
-    ['process_uptime', new RegExp('^Process uptime: (.*)\n', 'gm')],
-    ['operating_system', new RegExp('^Operating system: (.*)\n', 'gm')],
-    ['cpu', new RegExp('^CPU: (.*)\n', 'gm')]
-  ]
-  var results = {}
-  grabbers.forEach((grabber) => {
-    var match = grabber[1].exec(contents)
-    if (match) {
-      results[grabber[0]] = match[1].trim()
-    } else {
-      console.log(`No match on ${grabber[0]}`)
-    }
-  })
-  return results
-}
-
 const windowsVersionMatchers = [
   ['5.0', 'Windows 2000'],
-  ['5.1', 'Windows XP or Windows XP 64-Bit Edition Version 2002 (Itanium)'],
-  ['5.2', 'Windows Server 2003 or Windows XP x64 Edition (AMD64/EM64T) or Windows XP 64-Bit Edition Version 2003 (Itanium)'],
-  ['6.0.6000', 'Windows Vista'],
-  ['6.0.6001', 'Windows Vista SP1 or Windows Server 2008'],
-  ['6.1.7600', 'Windows 7 or Windows Server 2008 R2'],
-  ['6.1.7601', 'Windows 7 SP1 or Windows Server 2008 R2 SP1'],
-  ['6.2', 'Windows 8 or Windows Server 2012'],
-  ['6.3.92', 'Windows 8.1 or Windows Server 2012 R2'],
-  ['6.3.96', 'Windows 8.1 with Update 1'],
+  ['5.1', 'Windows XP'],
+  ['5.2', 'Windows Server 2003 or Windows XP'],
+  ['6.0', 'Windows Vista'],
+  ['6.1', 'Windows 7'],
+  ['6.2', 'Windows 8'],
+  ['6.3', 'Windows 8.1'],
   ['10', 'Windows 10']
 ]
 
@@ -140,6 +170,6 @@ export function matchWindowsOperatingSystem (os) {
   if (matches.length) {
     return matches[0][1]
   } else {
-    return null
+    return 'unknown'
   }
 }

@@ -34,7 +34,7 @@
     "joi": "^7.0.1",
     "jquery": "^2.2.0",
     "kerberos": "0.0.17",
-    "minidump": "^0.9.0",
+    "minidump": "brave/node-minidump",
     "moment": "^2.11.1",
     "mongodb": "^2.1.4",
     "pg": "4.4.4",

@@ -11,12 +11,7 @@ process.env.S3_CRASH_SECRET = 'XXX'
 
 // Require the mini module
 var mini = require('../dist/mini')
-tap.ok(mini.parsePlainTextMinidump, 'Require successful')
-
-// Retrieve metadata from the crash report
-var crashReport = "Crash reason: Some Reason\n\nAssertion: Some assertion\nCPU: AMD\n"
-var meta = mini.parsePlainTextMinidump(crashReport)
-tap.ok(meta.crash_reason === 'Some Reason', 'grabbers working as expected')
+tap.ok(mini.metadataFromMachineCrash, 'Require successful')
 
 // Async test for successfully parsing win32 crash dump
 tap.test('Parse existing win32 crash dump', function (childTest) {
@@ -51,8 +46,8 @@ tap.test('Parse invalid crash dump', function (childTest) {
 })
 
 tap.test('Windows OS version', function (childTest) {
-  childTest.equal(mini.matchWindowsOperatingSystem('6.1.7600'), 'Windows 7 or Windows Server 2008 R2', 'Exact match')
-  childTest.equal(mini.matchWindowsOperatingSystem('5.1.0056'), 'Windows XP or Windows XP 64-Bit Edition Version 2002 (Itanium)', 'partial match')
-  childTest.equal(mini.matchWindowsOperatingSystem('9.0'), null, 'no match')
+  childTest.equal(mini.matchWindowsOperatingSystem('6.1.7600'), 'Windows 7')
+  childTest.equal(mini.matchWindowsOperatingSystem('5.1.0056'), 'Windows XP')
+  childTest.equal(mini.matchWindowsOperatingSystem('9.0'), 'unknown', 'no match')
   childTest.end()
 })
