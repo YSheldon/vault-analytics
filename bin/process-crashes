@@ -134,7 +134,8 @@ const resourcesReady = function (asyncError, resources) {
                 console.log(`Indexed in Elastic Search [${msgContents._id}]`)
                 // done, ack the message and callback
                 resources.ch.ack(msg)
-                cb(esErr || pgErr)
+                // Ignore errors as they are often warnings about duplicates
+                cb(null)
               }
             )
           })
