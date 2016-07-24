@@ -30,9 +30,6 @@ const ES_TYPE = process.env.ES_TYPE || 'crash'
 // Number of milliseconds for this process to run before timing out
 const TIMEOUT = process.env.TIMEOUT || 60000
 
-// Count of records indexed in ES
-var indexedCount = 0
-
 // Connect to Elastic Search at a host and port
 const connectElasticSearch = function(cb) {
   console.log('Connecting to ElasticSearch at ' + ES_URL)
@@ -64,24 +61,17 @@ const connectAMQP = function(cb) {
   })
 }
 
-// Set to true if in the middle of processing a crash report, false otherwise
-var processing = false
-
-
 // This is triggered when connections to all resources are established
 const resourcesReady = function (asyncError, resources) {
   if (asyncError) {
     throw new Error(asyncError.toString())
   }
 
-  // Heroku processes are restarted every X minutes (we need to timeout if not processing)
+  // Heroku processes are restarted every X minutes
   setInterval(() => {
-    if (!processing) {
-      console.log('Timeout - ' + indexedCount + ' records processed')
-      reporter.shutdown(runInfo, resources.pg, function () {
-        process.exit()
-      })
-    }
+    reporter.shutdown(runInfo, resources.pg, function () {
+      process.exit()
+    })
   }, TIMEOUT)
 
   // Write crash report meta data to Elastic Search (Kibana)
@@ -97,7 +87,7 @@ const resourcesReady = function (asyncError, resources) {
   // Write crash report meta data to Postgres
   const writeToPostgres = function (id, contents, cb) {
     resources.pg.query(
-      'INSERT INTO dtl.crashes (id, contents) VALUES($1, $2)',
+      'INSERT INTO dtl.crashes (id, contents) VALUES($1, $2) ON CONFLICT (id) DO UPDATE SET contents = $2',
       [id, JSON.stringify(contents)],
       cb
     )
@@ -108,58 +98,85 @@ const resourcesReady = function (asyncError, resources) {
   const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES || 1)
   var msgCount = 0
 
+  // Build a function capable of retrieving the crash report,
+  // parsing and writing it to Postgres and ES
+  function buildMessageHandler (msg, msgContents) {
+    return function (cb) {
+      console.log("Parsing crash report [" + msgContents._id + ']')
+      // Read crash report from S3 and parse with minidump
+      // (which handles Symbol substitution)
+      mini.readAndParse(msgContents._id, (miniError, crashReport, metadata) => {
+        crashReport = crashReport.toString()
+
+        // install the parser minidump metadata into the crash report
+        msgContents.metadata = metadata
+
+        // Write the record to Postgres
+        writeToPostgres(
+          msgContents._id,
+          msgContents,
+          function(pgErr, results) {
+            if (pgErr) {
+              console.log(pgErr.toString())
+            }
+            console.log(`Written to Postgres [${msgContents._id}]`)
+
+            // Write the record to Elastic Search
+            writeToElasticSearch(
+              msgContents._id,
+              // We need to store the crash in a 'crash' attribute because
+              // the _ver field collides with ElasticSearch
+              { crash: msgContents },
+              function (esErr, response) {
+                if (esErr) {
+                  console.log(esErr.toString())
+                }
+                console.log(`Indexed in Elastic Search [${msgContents._id}]`)
+                // done, ack the message and callback
+                resources.ch.ack(msg)
+                cb(esErr || pgErr)
+              }
+            )
+          })
+      })
+    }
+  }
+
   // Start listening for messages
   console.log('All resources available. Processing a maximum of ' + MAX_MESSAGES + ' crash reports.')
   console.log('Reading messages from AMQP')
+
+  var cancelled = false
+  var funcs = []
+
   resources.ch.consume(MQ_QUEUE, (msg) => {
-    // We received a crash report, start processing
-    processing = true
     var msgContents = JSON.parse(msg.content.toString())
+    console.log("Handling message")
 
     msgCount += 1
-    // Check here for max messages
+    // Check here for max messages, if we are above the message threshold then fire the handlers
     if (msgCount > MAX_MESSAGES) {
-      resources.ch.cancel(CONSUMER_TAG)
+      if (!cancelled) {
+        resources.ch.cancel(CONSUMER_TAG, function() {
+          console.log('Channel closed')
+
+          // Execute all crash parser functions in series
+          async.series(funcs, (seriesErr) => {
+            if (seriesErr) {
+              throw new Error(seriesErr)
+            }
+            console.log("Processing complete - exiting")
+            // All done - close Postgres
+            resources.pg.end()
+            process.exit()
+          })
+
+        })
+      }
+      cancelled = true
       return
     }
-
-    // Read crash report from S3 and parse with minidump
-    // (which handles Symbol substitution)
-    mini.readAndParse(msgContents._id, null, (miniError, crashReport, metadata) => {
-      crashReport = crashReport.toString()
-
-      // install the parser minidump metadata into the crash report
-      msgContents.metadata = metadata
-      console.log(metadata)
-
-      writeToPostgres(
-        msgContents._id,
-        msgContents,
-        function(pgErr, results) {
-          if (pgErr) {
-            console.log(pgErr.toString())
-          }
-          console.log(`Written to Postgres [${msgContents._id}]`)
-
-          writeToElasticSearch(
-            msgContents._id,
-            // We need to store the crash in a 'crash' attribute because
-            // the _ver field collides with ElasticSearch
-            { crash: msgContents },
-            function (esErr, response) {
-              if (esErr) {
-                console.log(esErr.toString())
-              }
-              indexedCount += 1
-              console.log(`Indexed in Elastic Search [${msgContents._id}]`)
-              // Everything is done, ack the message and
-              // signal finished processing
-              resources.ch.ack(msg)
-              processing = false
-            }
-          )
-        })
-    })
+    funcs.push(buildMessageHandler(msg, msgContents))
   }, { consumerTag: CONSUMER_TAG })
 }
 

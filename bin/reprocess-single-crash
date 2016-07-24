@@ -40,7 +40,7 @@ pgc.setup(function(err, pg) {
     console.log(dump)
 
     // Retrieve from the S3 and stack walk the crash report
-    mini.readAndParse(id, null, function (miniError, crashReport, metadata) {
+    mini.readAndParse(id, function (miniError, crashReport, metadata) {
       if (miniError) {
         throw new Error(miniError)
       }

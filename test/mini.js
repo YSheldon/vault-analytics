@@ -15,34 +15,34 @@ tap.ok(mini.metadataFromMachineCrash, 'Require successful')
 
 // Async test for successfully parsing win32 crash dump
 tap.test('Parse existing win32 crash dump', function (childTest) {
-  mini.fileDumpHandler('./test/fixtures/dumps/56c5e4ef2a335d11003ceeef', function (err, crashReport, metadata) {
+  mini.parseCrashHandler('./test/fixtures/dumps/56c5e4ef2a335d11003ceeef', function (err, crashReport, metadata) {
     childTest.ok(crashReport, 'crash report generated')
     childTest.ok(_.isObject(metadata), 'metadata is an object')
     childTest.ok(metadata.crash_reason, 'Crash reason extracted')
     childTest.ok(metadata.crash_address === '0x30', 'Crash address extracted')
     childTest.end()
-  })()
+  })
 })
 
 // Async test for successfully parsing linux crash dump
 tap.test('Parse existing linux crash dump', function (childTest) {
-  mini.fileDumpHandler('./test/fixtures/dumps/578d22d769ba5c1100e09713', function (err, crashReport, metadata) {
+  mini.parseCrashHandler('./test/fixtures/dumps/578d22d769ba5c1100e09713', function (err, crashReport, metadata) {
     childTest.ok(crashReport, 'crash report generated')
     childTest.ok(_.isObject(metadata), 'metadata is an object')
     childTest.ok(metadata.crash_reason, 'Crash reason extracted')
     childTest.equal(metadata.operating_system, 'Linux', 'operating_system extracted')
     childTest.end()
-  })()
+  })
 })
 
 // Async test for unsuccessfully parsing crash dump
 tap.test('Parse invalid crash dump', function (childTest) {
-  mini.fileDumpHandler('./test/fixtures/dumps/XXX', function (err, crashReport, metadata) {
+  mini.parseCrashHandler('./test/fixtures/dumps/XXX', function (err, crashReport, metadata) {
     childTest.ok(crashReport === '', 'crash report not generated')
     childTest.ok(_.isObject(metadata), 'metadata is an object')
     childTest.ok(metadata.crash_reason === undefined, 'Crash reason not extracted')
     childTest.end()
-  })()
+  })
 })
 
 tap.test('Windows OS version', function (childTest) {

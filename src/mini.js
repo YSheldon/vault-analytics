@@ -7,7 +7,6 @@ var _ = require('underscore')
 
 const S3_CRASH_BUCKET = process.env.S3_CRASH_BUCKET || 'brave-laptop-crash-reports'
 const S3_CRASH_REGION = process.env.S3_CRASH_REGION || 'us-west-2'
-const WALK_DELAY = parseInt(process.env.WALK_DELAY || 1)
 
 if (!process.env.S3_CRASH_KEY || !process.env.S3_CRASH_SECRET) {
   throw new Error('S3_CRASH_KEY and S3_CRASH_SECRET should be set to the S3 account credentials for storing crash reports')
@@ -91,17 +90,9 @@ exports.parseCrashHandler = (filename, cb) => {
   })
 }
 
-// Walk the stack for an existing file and extract metadata
-exports.fileDumpHandler = (filename, cb) => {
-  return () => {
-    exports.parseCrashHandler(filename, cb)
-  }
-}
-
 // Retrieve a binary minidump file from S3, parse it, and
 // substitute symbols
-exports.readAndParse = (id, delay, cb) => {
-  delay = delay || WALK_DELAY
+exports.readAndParse = (id, cb) => {
   var s3 = new AWS.S3()
   var params = {
     Bucket: S3_CRASH_BUCKET,
@@ -115,10 +106,7 @@ exports.readAndParse = (id, delay, cb) => {
   s3.getObject(params).
     on('httpData', function(chunk) { file.write(chunk) }).
     on('httpDone', function() {
-      console.log('Delaying processing by ' + delay)
-      setTimeout(function () {
-        exports.fileDumpHandler(filename, cb)()
-      }, delay)
+      exports.parseCrashHandler(filename, cb)
     }).
     on('error', function(err) {
       console.log("Error retrieving crash report from S3")
