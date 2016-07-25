@@ -33,7 +33,7 @@ SELECT
   COUNT(*)                              AS total
 FROM dtl.crashes
 WHERE
-  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL)
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL)
 GROUP BY
   contents->>'_version',
   contents->>'platform',
@@ -53,7 +53,7 @@ SELECT
   COUNT(*)                                                AS total
 FROM dtl.crashes
 WHERE
-  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL)
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL)
 GROUP BY
   contents->>'_version',
   contents->>'platform',
@@ -75,8 +75,9 @@ SELECT
   COALESCE(contents->'metadata'->>'signature', 'Unknown')    AS signature
 FROM dtl.crashes
 WHERE
-  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL)
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL)
 ORDER BY ts DESC
+LIMIT 100
 `
 
 const CRASH_REPORT_DETAILS = `
@@ -92,7 +93,7 @@ FROM dtl.crashes
 WHERE
   contents->>'platform' = $1 AND
   contents->>'_version' = $2 AND
-  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($3 as INTERVAL) AND
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($3 as INTERVAL) AND
   contents->'metadata'->>'crash_reason' = $4 AND
   contents->'metadata'->>'cpu' = $5 AND
   COALESCE(contents->'metadata'->>'signature', 'unknown') = $6
