@@ -73,6 +73,9 @@ exports.parseCrashHandler = (filename, cb) => {
 
   const readPlainText = (plainTextCallback) => {
     minidump.walkStack(filename, symbolPaths, (err, results) => {
+      if (err) {
+        console.log('Warning: error retrieving human readable version. This is often caused by a missing threads section.')
+      }
       results = results || ''
       plainTextCallback(err, results.toString())
     }, { machine: false })
@@ -81,7 +84,7 @@ exports.parseCrashHandler = (filename, cb) => {
   const readMetadata = (metadataCallback) => {
     minidump.walkStack(filename, symbolPaths, (err, results) => {
       if (err) {
-        console.log('Warning: error retrieving machine readable version. This is often caused by a missing threads section')
+        console.log('Warning: error retrieving machine readable version. This is often caused by a missing threads section.')
       }
       results = results || ''
       var metadata = {}
@@ -94,7 +97,8 @@ exports.parseCrashHandler = (filename, cb) => {
 
   readPlainText((plainTextErr, plainText) => {
     readMetadata((metadataErr, metadata) => {
-      cb(plainTextErr || metadataErr, plainText, metadata)
+      // We are not passing the errors to the calling function as they are being warned above
+      cb(null, plainText, metadata)
     })
   })
 }
