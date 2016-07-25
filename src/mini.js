@@ -38,14 +38,20 @@ exports.metadataFromMachineCrash = (crash) => {
   var cpuTokens = lines[1].split('|')
   var crashTokens = lines[2].split('|')
 
-  var threadLines = (lines.filter((line) => {
-    return line.match(new RegExp("^" + crashTokens[3]))
-  }) || []).map((line) => {
-    return line.split('|')
-  })
+  var sig = 'unknown'
+  if (crashTokens[3]) {
+    var threadLines = (lines.filter((line) => {
+      return line.match(new RegExp("^" + crashTokens[3]))
+    }) || []).map((line) => {
+      return line.split('|')
+    })
+    sig = signature(threadLines)
+  } else {
+    console.log('Warning: no crash thread number given - signature unknown')
+  }
 
   return {
-    signature: signature(threadLines),
+    signature: sig,
     operating_system: osTokens[1],
     operating_system_version: osTokens[2],
     operating_system_name: matchWindowsOperatingSystem(osTokens[2]),
