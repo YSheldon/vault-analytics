@@ -43,6 +43,27 @@ ORDER BY
   COUNT(*) DESC
 `
 
+const CRASH_REPORTS_SIGNATURE = `
+SELECT
+  contents->>'_version'                                   AS version,
+  contents->>'platform'                                   AS platform,
+  contents->'metadata'->>'crash_reason'                   AS crash_reason,
+  contents->'metadata'->>'cpu'                            AS cpu,
+  COALESCE(contents->'metadata'->>'signature', 'unknown') AS signature,
+  COUNT(*)                                                AS total
+FROM dtl.crashes
+WHERE
+  TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL)
+GROUP BY
+  contents->>'_version',
+  contents->>'platform',
+  contents->'metadata'->>'crash_reason',
+  contents->'metadata'->>'cpu',
+  COALESCE(contents->'metadata'->>'signature', 'unknown')
+ORDER BY
+  COUNT(*) DESC
+`
+
 const RECENT_CRASH_REPORT_DETAILS = `
 SELECT
   id,
@@ -50,7 +71,8 @@ SELECT
   contents->>'_version'                                      AS version,
   contents->>'platform'                                      AS platform,
   COALESCE(contents->'metadata'->>'cpu', 'Unknown')          AS cpu,
-  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason,
+  COALESCE(contents->'metadata'->>'signature', 'Unknown')    AS signature
 FROM dtl.crashes
 WHERE
   TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($1 as INTERVAL)
@@ -64,14 +86,16 @@ SELECT
   contents->>'_version'                                      AS version,
   contents->>'platform'                                      AS platform,
   COALESCE(contents->'metadata'->>'cpu', 'Unknown')          AS cpu,
-  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason,
+  COALESCE(contents->'metadata'->>'signature', 'unknown')    AS signature
 FROM dtl.crashes
 WHERE
   contents->>'platform' = $1 AND
   contents->>'_version' = $2 AND
   TO_DATE(contents->>'year_month_day', 'YYYY-MM-DD') >= current_date - CAST($3 as INTERVAL) AND
   contents->'metadata'->>'crash_reason' = $4 AND
-  contents->'metadata'->>'cpu' = $5
+  contents->'metadata'->>'cpu' = $5 AND
+  COALESCE(contents->'metadata'->>'signature', 'unknown') = $6
 ORDER BY ts DESC
 `
 
@@ -148,7 +172,7 @@ exports.setup = (server, client, mongo) => {
       days += ' days'
       let platforms = common.platformPostgresArray(request.query.platformFilter)
       let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(CRASH_REPORTS, [days], (err, results) => {
+      client.query(CRASH_REPORTS_SIGNATURE, [days], (err, results) => {
         if (err) {
           console.log(err)
           reply(err.toString()).code(500)
@@ -166,7 +190,7 @@ exports.setup = (server, client, mongo) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       console.log(request.query)
-      client.query(CRASH_REPORT_DETAILS, [request.query.platform, request.query.version, days, request.query.crash_reason, request.query.cpu], (err, results) => {
+      client.query(CRASH_REPORT_DETAILS, [request.query.platform, request.query.version, days, request.query.crash_reason, request.query.cpu, request.query.signature], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {
