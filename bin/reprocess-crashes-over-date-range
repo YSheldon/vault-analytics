@@ -52,6 +52,15 @@ function buildProcessCrashReporter (pg, id, contents) {
   }
 }
 
+const CRASHES_YMD_QUERY = `
+SELECT *
+FROM dtl.crashes
+WHERE
+  ( contents->>'year_month_day' >= $1 AND contents->>'year_month_day' <= $2 ) AND
+  contents->'metadata'->>'signature' IS NULL
+ORDER BY ts ASC
+`
+
 // Connect to Postgres
 pgc.setup(function(err, pg) {
   if (err) {
@@ -60,7 +69,7 @@ pgc.setup(function(err, pg) {
   console.log("Connected")
 
   // find unprocessed crash reports within a date range
-  pg.query("select * from dtl.crashes where contents->>'year_month_day' >= $1 and contents->>'year_month_day' <= $2 order by ts asc", [start, end], function (queryError, results) {
+  pg.query(CRASHES_YMD_QUERY, [start, end], function (queryError, results) {
     if (queryError) {
       throw new Error(queryError)
     }
