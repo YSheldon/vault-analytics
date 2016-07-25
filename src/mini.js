@@ -80,6 +80,9 @@ exports.parseCrashHandler = (filename, cb) => {
 
   const readMetadata = (metadataCallback) => {
     minidump.walkStack(filename, symbolPaths, (err, results) => {
+      if (err) {
+        console.log('Warning: error retrieving machine readable version. This is often caused by a missing threads section')
+      }
       results = results || ''
       var metadata = {}
       if (results) {

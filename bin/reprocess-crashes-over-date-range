@@ -92,7 +92,7 @@ pgc.setup(function(err, pg) {
     // execute the function handlers and exit
     async.series(funcs, function (asyncError, results) {
       if (asyncError) {
-        throw new Error(asyncError)
+        console.log asyncError.toString()
       }
       console.log('Done')
       pg.end()
