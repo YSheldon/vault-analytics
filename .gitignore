@@ -35,3 +35,6 @@ ssl
 
 bower_components
 tmp/
+
+# Heroku environment variables
+.env
