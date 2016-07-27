@@ -1,56 +1,19 @@
-#!/usr/bin/env node
-
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 const async = require('async')
-const amqp = require('amqplib/callback_api')
-const elasticsearch = require('elasticsearch')
 
+// resources
 const pgc = require('../dist/pgc')
+const esc = require('../dist/esc')
+const amqpc = require('../dist/amqpc')
+
 const mini = require('../dist/mini')
 
-// RabbitMQ connection parameters
-const MQ_URL = process.env.RABBITMQ_BIGWIG_RX_URL || process.env.AMQP_URL || 'amqp://localhost:5672'
-const MQ_QUEUE = process.env.MQ_QUEUE || 'crashes'
-
-// ElasticSearch connection parameters
-const ES_URL = process.env.SEARCHBOX_URL || 'localhost:9200'
+// ElasticSearch
 const ES_INDEX = process.env.ES_INDEX || 'crashes'
 const ES_TYPE = process.env.ES_TYPE || 'crash'
-
-// Connect to Elastic Search at a host and port
-const connectElasticSearch = function(cb) {
-  console.log('Connecting to ElasticSearch at ' + ES_URL)
-  var es = new elasticsearch.Client({
-    host: ES_URL,
-    log: null
-  })
-  cb(null, es)
-}
-
-// Connect to messaging system and return a communication channel
-const connectAMQP = function(cb) {
-  var amqpConnectionString = MQ_URL
-  console.log('Connecting to AMQP server at ' + amqpConnectionString)
-  amqp.connect(amqpConnectionString, (err, conn) => {
-    if (err != null) {
-      throw new Error(err)
-    }
-    console.log('AMQP connection established')
-    var on_open = (err, ch) => {
-      console.log(`AMQP connected to channel ${MQ_QUEUE}`)
-      if (err != null) {
-        throw new Error(err)
-      }
-      ch.prefetch(1)
-      ch.assertQueue(MQ_QUEUE, { durable: true })
-      cb(err, ch)
-    }
-    conn.createChannel(on_open)
-  })
-}
 
 // This is triggered when connections to all resources are established
 const resourcesReady = function (asyncError, resources) {
@@ -125,10 +88,12 @@ const resourcesReady = function (asyncError, resources) {
   console.log('All resources available.')
   console.log('Reading messages from AMQP')
 
-  resources.ch.consume(MQ_QUEUE, (msg) => {
+  // Read messages from queue
+  resources.ch.consume(resources.ch.queueName, (msg) => {
     var msgContents = JSON.parse(msg.content.toString())
     console.log(`[${msgContents._id}] ******************** start ********************`)
-    buildMessageHandler(msg, msgContents)(function() {
+    var handler = buildMessageHandler(msg, msgContents)
+    handler(function(err) {
       console.log(`[${msgContents._id}] complete`)
     })
   })
@@ -136,7 +101,7 @@ const resourcesReady = function (asyncError, resources) {
 
 // Startup, connect to all required resources and start processing
 async.parallel({
-  es: connectElasticSearch,
+  es: esc.setup,
   pg: pgc.setup,
-  ch: connectAMQP
+  ch: amqpc.setup
 }, resourcesReady)
