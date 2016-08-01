@@ -344,7 +344,7 @@ var recentCrashesRetriever = function() {
       var table = $('#recent-crash-list-table tbody')
       table.empty()
       _.each(crashes, function(crash) {
-        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td>' + crash.ymd + '</td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.cpu + '</td><td>' + crash.crash_reason + '</td><td>' + crash.signature + '</td></tr>')
+        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.cpu + '</td><td>' + crash.crash_reason + '<br/>' + crash.signature + '</td></tr>')
       })
     }
   })
@@ -659,7 +659,7 @@ router.get('crash_list/:platform/:version/:days/:crash_reason/:cpu/:signature', 
       var table = $('#crash-list-table tbody')
       table.empty()
       _.each(crashes, function(crash) {
-        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td>' + crash.ymd + '</td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.cpu + '</td><td>' + crash.crash_reason + '</td><td>' + crash.signature + '</td></tr>')
+        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.cpu + '</td><td>' + crash.crash_reason + '<br/>' + crash.signature + '</td></tr>')
       })
     }
   })

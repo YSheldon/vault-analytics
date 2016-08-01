@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 const _ = require('underscore')
+const moment = require('moment')
 
 const allPlatforms = ['osx', 'winx64', 'winia32', 'ios', 'android', 'unknown', 'linux', 'darwin']
 exports.allPlatforms = allPlatforms
@@ -40,6 +41,9 @@ exports.formatPGRow = (row) => {
   }
   if (row.daily_percentage) {
     row.daily_percentage = parseFloat(row.daily_percentage)
+  }
+  if (row.ts) {
+    row.ago = moment(row.ts).add(moment().utcOffset(), 'minutes').fromNow()
   }
   return row
 }
