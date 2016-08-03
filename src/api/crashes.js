@@ -25,26 +25,24 @@ ORDER BY FC.ymd DESC, FC.platform || ' ' || FC.version
 `
 
 const CRASH_REPORTS_SIGNATURE = `
-SELECT * FROM (
 SELECT
-  contents->>'_version'                                   AS version,
-  contents->>'platform'                                   AS platform,
-  contents->'metadata'->>'crash_reason'                   AS crash_reason,
-  contents->'metadata'->>'cpu'                            AS cpu,
-  COALESCE(contents->'metadata'->>'signature', 'unknown') AS signature,
-  COUNT(*)                                                AS total
-FROM dtl.crashes
+  version,
+  platform,
+  cpu,
+  crash_reason,
+  signature,
+  SUM(total) AS total
+FROM dw.fc_crashes_mv
 WHERE
-  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL)
+  ymd >= current_date - cast($1 AS interval)
 GROUP BY
-  contents->>'_version',
-  contents->>'platform',
-  contents->'metadata'->>'crash_reason',
-  contents->'metadata'->>'cpu',
-  COALESCE(contents->'metadata'->>'signature', 'unknown')
-ORDER BY
-  COUNT(*) DESC
-) T WHERE total > 10
+  version,
+  platform,
+  cpu,
+  crash_reason,
+  signature
+HAVING SUM(total) > 10
+ORDER BY total DESC
 `
 
 const RECENT_CRASH_REPORT_DETAILS = `
