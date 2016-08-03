@@ -1,0 +1,43 @@
+#!/usr/bin/env node
+var pgc = require('../dist/pgc')
+var async = require('async')
+
+// materialized view names keyed on a set identifier
+var mvs = {
+  crashes: [
+    "dw.fc_crashes_mv"
+  ]
+}
+
+// We need the set identifier
+var mvSet = process.argv[2]
+if (!(mvSet && mvs[mvSet])) {
+   throw new Error("Materialized view set identifier required as first parameter")
+}
+
+// Build an updater function for a materialized view
+function buildMVUpdater (client, name) {
+  return function (cb) {
+    console.log("  * " + name)
+    client.query("REFRESH MATERIALIZED VIEW " + name, [], cb)
+  }
+}
+
+// Connect to postgres
+pgc.setup(function (err, client) {
+  if (err) {
+    throw new Error(err)
+  }
+
+  var funcs = mvs[mvSet].map(function (name) {
+    return buildMVUpdater(client, name)
+  })
+
+  console.log("Updating materialized views for set '" + mvSet + "'")
+  async.series(funcs, function (asyncError, results) {
+    if (asyncError) {
+      throw new Error(asyncError)
+    }
+    client.end()
+  })
+})
