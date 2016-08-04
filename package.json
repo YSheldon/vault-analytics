@@ -1,6 +1,6 @@
 {
   "name": "vault-analytics",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Vault analytics UI and data processors",
   "main": "index.js",
   "scripts": {
