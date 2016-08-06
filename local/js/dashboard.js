@@ -82,15 +82,16 @@ var round = function (x, n) {
 var topCrashHandler = function(rows) {
   var table = $('#top-crash-table tbody')
   table.empty()
+  var sum = _.reduce(rows, function (memo, row) { return memo + parseInt(row.total) }, 0)
   rows.forEach(function (row) {
     var params = [row.platform, row.version, pageState.days, encodeURIComponent(row.crash_reason), row.cpu, encodeURIComponent(row.signature)].join('/')
     var buf = '<tr>'
-    buf = buf + '<td class="text-right"><a href="#crash_list/' + params + '">' + row.total + '</a></td>'
+    var percentage = round(row.total / sum * 100, 1)
+    buf = buf + '<td class="text-right"><a href="#crash_list/' + params + '">' + row.total + '</a><br/><span class="ago">' + percentage + '%</span></td>'
     buf = buf + '<td class="text-left">' + row.version + '</td>'
     buf = buf + '<td class="text-left">' + row.platform + '</td>'
     buf = buf + '<td class="text-left">' + row.cpu + '</td>'
-    buf = buf + '<td class="text-left">' + row.crash_reason + '</td>'
-    buf = buf + '<td class="text-left">' + row.signature + '</td>'
+    buf = buf + '<td class="text-left">' + row.crash_reason + '<br/>' + row.signature + '</td>'
     buf = buf + '</tr>'
     table.append(buf)
   })
