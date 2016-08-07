@@ -6,16 +6,15 @@
 
 /*
 
-  Read and re-parse crash reporting metadata from S3 crash reports
-  over a specified date range (that do not contain a crash reason)
+  Read and re-send messages for unprocessed crashes
+  over a specified date range (that do not contain a signature)
 
 */
 
 const async = require('async')
-const util = require('util')
 
 const pgc = require('../dist/pgc')
-const mini = require('../dist/mini')
+const amqpc = require('../dist/amqpc')
 
 var start = process.argv[2]
 var end = process.argv[3]
@@ -26,29 +25,16 @@ if (!(start && end)) {
 }
 
 // Build a crash processing function
-function buildProcessCrashReporter (pg, id, contents) {
+function buildProcessCrashReporter (channel, contents) {
   return function (cb) {
     // Retrieve from the S3 and stack walk the crash report
-    mini.readAndParse(id, function (miniError, crashReport, metadata) {
-      if (miniError) {
-        cb(miniError)
-        return
-      }
-      console.log(util.inspect(metadata))
-      contents.metadata = metadata
-      // If there is metadata, save it to Postgres
-      if (metadata) {
-        pg.query("UPDATE dtl.crashes SET contents = $1 WHERE id = $2", [contents, id], function (updateError) {
-          if (updateError) {
-            cb(updateError)
-            return
-          }
-          cb(null)
-        })
-      } else {
-        cb(null)
-      }
-    })
+    if (!process.env.DRY_RUN) {
+      console.log(`Sending id ${contents._id}`)
+      amqpc.send(contents, channel)
+    } else {
+      console.log(`Dry run, not sending id ${contents._id}`)
+    }
+    cb(null)
   }
 }
 
@@ -56,29 +42,29 @@ const CRASHES_YMD_QUERY = `
 SELECT *
 FROM dtl.crashes
 WHERE
-  ( contents->>'year_month_day' >= $1 AND contents->>'year_month_day' <= $2 ) AND
-  contents->'metadata'->>'signature' IS NULL
+  ( contents->>'year_month_day' >= $1 AND contents->>'year_month_day' <= $2 )
+  AND contents->'metadata'->>'signature' IS NULL
 ORDER BY ts ASC
 `
 
 // Connect to Postgres
-pgc.setup(function(err, pg) {
+function resourcesReady (err, resources) {
   if (err) {
     throw new Error(err)
   }
-  console.log("Connected")
 
   // find unprocessed crash reports within a date range
-  pg.query(CRASHES_YMD_QUERY, [start, end], function (queryError, results) {
+  resources.pg.query(CRASHES_YMD_QUERY, [start, end], function (queryError, results) {
     if (queryError) {
       throw new Error(queryError)
     }
     if (results.rows.length === 0) {
-      throw new Error("No unprocessed crash reports in that date range")
+      console.log("No unprocessed crash reports in date range ", [start, end])
+      process.exit(0)
     }
 
     console.log(results.rows.length + ' unprocessed crash reports in this date range. Processing ' + limit + '.')
-    
+
     // Limit to a set number of records
     if (results.rows.length > limit) {
       results.rows = results.rows.slice(0, limit)
@@ -86,7 +72,7 @@ pgc.setup(function(err, pg) {
 
     // build function handlers
     var funcs = results.rows.map(function (row) {
-      return buildProcessCrashReporter(pg, row.id, row.contents)
+      return buildProcessCrashReporter(resources.ch, row.contents)
     })
 
     // execute the function handlers and exit
@@ -94,8 +80,17 @@ pgc.setup(function(err, pg) {
       if (asyncError) {
         console.log(asyncError.toString())
       }
-      console.log('Done')
-      pg.end()
+      setTimeout(function() {
+        console.log('Done')
+        resources.pg.end()
+        process.exit(0)
+      }, 1000)
     })
   })
-})
+}
+
+// Startup, connect to all required resources and start processing
+async.parallel({
+  pg: pgc.setup,
+  ch: amqpc.setup
+}, resourcesReady)
