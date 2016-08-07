@@ -6,12 +6,14 @@
 
 /*
 
-  Read and re-parse crash reporting metadata from S3 crash report
+  Read and send message to crash reporting parser
 
 */
 
+const async = require('async')
+
 const pgc = require('../dist/pgc')
-const mini = require('../dist/mini')
+const amqpc = require('../dist/amqpc')
 
 // Retrieve id from argument list
 var id = process.argv[2]
@@ -19,49 +21,39 @@ if (!id) {
   throw new Error("id must be first argument")
 }
 
-// Connect to Postgres
-pgc.setup(function(err, pg) {
+function resourcesReady (err, resources) {
   if (err) {
     throw new Error(err)
   }
   console.log("Connected")
 
   // Retrieve the specific crash report
-  pg.query("SELECT * FROM dtl.crashes WHERE id = $1", [id], function(queryError, results) {
+  resources.pg.query("SELECT * FROM dtl.crashes WHERE id = $1", [id], function(queryError, results) {
     if (queryError) {
       throw new Error(queryError)
     }
     if (results.rows.length === 0) {
-      throw new Error("No crash report with that id")
+      console.log("No crash report with that id")
+      process.exit(1)
     }
 
     // Get the crash report component from the record
     var dump = results.rows[0].contents
     console.log(dump)
 
-    // Retrieve from the S3 and stack walk the crash report
-    mini.readAndParse(id, function (miniError, crashReport, metadata) {
-      if (miniError) {
-        console.log('Warning: ' + miniError)
-      }
+    // Publish message
+    amqpc.send(dump, resources.ch)
 
-      // Output to the console for debugging
-      console.log(crashReport)
-      console.log(metadata)
-
-      dump.metadata = metadata
-      // If there is metadata, save it to Postgres
-      if (metadata) {
-        pg.query("UPDATE dtl.crashes SET contents = $1 WHERE id = $2", [dump, id], function (updateError) {
-          if (updateError) {
-            throw new Error(updateError)
-          }
-          console.log("Metadata updated - done")
-          pg.end()
-        })
-      } else {
-        pg.end()
-      }
-    })
+    // We need to wait for the message to publish
+    setTimeout(function () {
+      resources.pg.end()
+      process.exit(0)
+    }, 500)
   })
-})
+}
+
+// Startup, connect to all required resources and start processing
+async.parallel({
+  pg: pgc.setup,
+  ch: amqpc.setup
+}, resourcesReady)

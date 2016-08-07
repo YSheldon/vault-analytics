@@ -30,3 +30,12 @@ export function setup (cb) {
     conn.createChannel(on_open)
   })
 }
+
+export function send (msg, ch) {
+  console.log(`Message sent to '${MQ_QUEUE}'`)
+  ch.sendToQueue(
+    MQ_QUEUE,
+    Buffer(JSON.stringify(msg)),
+    { persistent: true }
+  )
+}
