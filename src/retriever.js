@@ -104,6 +104,11 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
 
   var query = db.collection('usage').aggregate([
     {
+      $match: {
+        year_month_day: { $gt: '2016-07-01' }
+      }
+    },
+    {
       $match: { daily: true }
     },
     {
@@ -124,17 +129,8 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
           $ifNull: [ '$channel', 'dev' ]
         },
         ymd: {
-          $dateToString: {
-            format: '%Y-%m-%d', date: {
-              $add: [ (new Date(-5 * 60 * 60000)), '$ts' ]
-            }
-          }
+          $ifNull: [ '$year_month_day', '2016-02-10']
         }
-      }
-    },
-    {
-      $match: {
-        ymd: { $gt: '2016-07-01' }
       }
     },
     {
