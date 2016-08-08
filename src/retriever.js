@@ -134,7 +134,7 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
     },
     {
       $match: {
-        ymd: { $gt: '2016-01-18' }
+        ymd: { $gt: '2016-07-01' }
       }
     },
     {
@@ -163,7 +163,11 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
   ])
 
   query.toArray((err, result) => {
-    result = result.concat(exceptions)
+    if (err) {
+      throw new Error(err)
+    } else {
+      result = result.concat(exceptions)
+    }
     cb(err, result)
   })
 }
