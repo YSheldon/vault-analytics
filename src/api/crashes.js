@@ -49,12 +49,13 @@ const RECENT_CRASH_REPORT_DETAILS = `
 SELECT
   id,
   ts,
-  contents->>'year_month_day'                                AS ymd,
-  contents->>'_version'                                      AS version,
-  contents->>'platform'                                      AS platform,
-  COALESCE(contents->'metadata'->>'cpu', 'Unknown')          AS cpu,
-  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason,
-  COALESCE(contents->'metadata'->>'signature', 'Unknown')    AS signature
+  contents->>'year_month_day'                                         AS ymd,
+  contents->>'_version'                                               AS version,
+  contents->>'platform'                                               AS platform,
+  COALESCE(contents->'metadata'->>'cpu', 'Unknown')                   AS cpu,
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')          AS crash_reason,
+  COALESCE(contents->'metadata'->>'signature', 'Unknown')             AS signature,
+  COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown') AS operating_system_name
 FROM dtl.crashes
 WHERE
   sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL)
@@ -66,12 +67,13 @@ const CRASH_REPORT_DETAILS = `
 SELECT
   id,
   ts,
-  contents->>'year_month_day'                                AS ymd,
-  contents->>'_version'                                      AS version,
-  contents->>'platform'                                      AS platform,
-  COALESCE(contents->'metadata'->>'cpu', 'Unknown')          AS cpu,
-  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown') AS crash_reason,
-  COALESCE(contents->'metadata'->>'signature', 'unknown')    AS signature
+  contents->>'year_month_day'                                         AS ymd,
+  contents->>'_version'                                               AS version,
+  contents->>'platform'                                               AS platform,
+  COALESCE(contents->'metadata'->>'cpu', 'Unknown')                   AS cpu,
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')          AS crash_reason,
+  COALESCE(contents->'metadata'->>'signature', 'unknown')             AS signature,
+  COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown') AS operating_system_name
 FROM dtl.crashes
 WHERE
   contents->>'platform' = $1 AND

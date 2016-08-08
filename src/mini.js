@@ -50,11 +50,18 @@ exports.metadataFromMachineCrash = (crash) => {
     console.log('Warning: no crash thread number given - signature unknown')
   }
 
+  var operating_system_name = null
+  if (osTokens[1] === 'win32') {
+    operating_system_name = matchWindowsOperatingSystem(osTokens[2])
+  } else {
+    operating_system_name = osTokens[2]
+  }
+
   return {
     signature: sig,
     operating_system: osTokens[1],
     operating_system_version: osTokens[2],
-    operating_system_name: matchWindowsOperatingSystem(osTokens[2]),
+    operating_system_name: operating_system_name,
     cpu: cpuTokens[1],
     cpu_family: cpuTokens[2],
     cpu_count: cpuTokens[3],

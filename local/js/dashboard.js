@@ -345,7 +345,15 @@ var recentCrashesRetriever = function() {
       var table = $('#recent-crash-list-table tbody')
       table.empty()
       _.each(crashes, function(crash) {
-        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.cpu + '</td><td>' + crash.crash_reason + '<br/>' + crash.signature + '</td></tr>')
+        var buf = '<tr>'
+        buf = buf + '<td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td>'
+        buf = buf + '<td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td>'
+        buf = buf + '<td>' + crash.version + '</td>'
+        buf = buf + '<td>' + crash.platform + '<br/><span class="ago">' + crash.operating_system_name + '</span></td>'
+        buf = buf + '<td>' + crash.cpu + '</td>'
+        buf = buf + '<td>' + crash.crash_reason + '<br/>' + crash.signature + '</td>'
+        buf = buf + '</tr>'
+        table.append(buf)
       })
     }
   })
@@ -646,6 +654,7 @@ router.get('crash_list/:platform/:version/:days/:crash_reason/:cpu/:signature', 
   $('#top-crash-table').hide()
   $('#crash-detail').hide()
   $('#crash-list-table').show()
+
   var params = $.param({
     platform: req.params.platform,
     version: req.params.version,
@@ -654,13 +663,22 @@ router.get('crash_list/:platform/:version/:days/:crash_reason/:cpu/:signature', 
     cpu: req.params.cpu,
     signature: req.params.signature
   })
+
   $.ajax('/api/1/crash_report_details?' + params, {
     success: function(crashes) {
       $("#contentTitle").html("Crash Reports")
       var table = $('#crash-list-table tbody')
       table.empty()
       _.each(crashes, function(crash) {
-        table.append('<tr><td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td><td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td><td>' + crash.version + '</td><td>' + crash.platform + '</td><td>' + crash.cpu + '</td><td>' + crash.crash_reason + '<br/>' + crash.signature + '</td></tr>')
+        var buf = '<tr>'
+        buf = buf + '<td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td>'
+        buf = buf + '<td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td>'
+        buf = buf + '<td>' + crash.version + '</td>'
+        buf = buf + '<td>' + crash.platform + '<br/><span class="ago">' + crash.operating_system_name + '</span></td>'
+        buf = buf + '<td>' + crash.cpu + '</td>'
+        buf = buf + '<td>' + crash.crash_reason + '<br/>' + crash.signature + '</td>'
+        buf = buf + '</tr>'
+        table.append(buf)
       })
     }
   })
