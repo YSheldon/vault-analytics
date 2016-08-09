@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+
+process.env.S3_CRASH_KEY = 'UNUSED'
+process.env.S3_CRASH_SECRET = 'UNUSED'
+
+var fs = require('fs')
+var mini = require('../dist/mini')
+
+if (!(process.argv[2] && fs.existsSync(process.argv[2]))) {
+  console.log('Usage: ' + process.argv[1] + ' dump-filename')
+  process.exit(1)
+}
+
+mini.parseCrashHandler(process.argv[2], function(err, plain, meta) {
+  console.log(plain)
+})
