@@ -79,6 +79,23 @@ var round = function (x, n) {
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
 }
 
+var crashRatioHandler = function(rows) {
+  var table = $('#crash-ratio-table tbody')
+  table.empty()
+  rows.forEach(function (row) {
+    var params = [row.platform, row.version, pageState.days].join('/')
+    var buf = '<tr>'
+    buf = buf + '<td class="text-right"><a href="#crash_ratio_list/' + params + '">' + round(row.crash_rate * 100, 1) + '</a></td>'
+    buf = buf + '<td class="text-left">' + row.version + '</td>'
+    buf = buf + '<td class="text-left">' + row.platform + '</td>'
+    buf = buf + '<td class="text-right">' + row.crashes + '</td>'
+    buf = buf + '<td class="text-right">' + row.total + '</td>'
+
+    buf = buf + '</tr>'
+    table.append(buf)
+  })
+}
+
 var topCrashHandler = function(rows) {
   var table = $('#top-crash-table tbody')
   table.empty()
@@ -258,7 +275,8 @@ var contents = [
   "overviewContent",
   "statsContent",
   "topCrashContent",
-  "recentCrashContent"
+  "recentCrashContent",
+  "crashRatioContent"
 ]
 
 var serializePlatformParams = function () {
@@ -335,6 +353,12 @@ var DUSRetriever = function() {
 var topCrashesRetriever = function() {
   $.ajax('/api/1/crash_reports?' + standardParams(), {
     success: topCrashHandler
+  })
+}
+
+var crashRatioRetriever = function() {
+  $.ajax('/api/1/crash_ratios?' + standardParams(), {
+    success: crashRatioHandler
   })
 }
 
@@ -427,6 +451,11 @@ var menuItems = {
     title: "Top Crashes By Platform and Version",
     show: "topCrashContent",
     retriever: topCrashesRetriever
+  },
+  "mnCrashRatio": {
+    title: "Crash Ratio By Platform and Version",
+    show: "crashRatioContent",
+    retriever: crashRatioRetriever
   },
   "mnRecentCrashes": {
     title: "Recent Crashes",
@@ -567,6 +596,15 @@ router.get('top_crashes', function(req) {
   $('#top-crash-table').show()
   $('#crash-detail').hide()
   $('#crash-list-table').hide()
+})
+
+router.get('crash_ratio', function (req) {
+  pageState.currentlySelected = 'mnCrashRatio'
+  updatePageUIState()
+  refreshData()
+
+  $('#crash-ratio-table').show()
+  $('#crash-ratio-detail-table').hide()
 })
 
 router.get('recent_crashes', function(req) {

@@ -46,17 +46,21 @@ ORDER BY total DESC
 `
 
 const CRASH_RATIO = `
-SELECT
+SELECT version, platform, crashes, total, crashes / total AS crash_rate
+FROM
+( SELECT
   version,
   platform,
-  crashes,
-  total,
-  crash_rate
+  SUM(crashes) as crashes,
+  SUM(total) as total
 FROM dw.fc_crashes_dau_mv
 WHERE
-  ymd >= current_date - cast($1 AS interval) AND
-  total > 50
-ORDER BY crash_rate DESC
+  ymd >= current_date - cast($1 AS interval)
+GROUP BY
+  version,
+  platform
+HAVING SUM(total) > 50 ) CR
+ORDER BY crashes / total DESC
 `
 
 const CRASH_REPORT_DETAILS_PLATFORM_VERSION = `
