@@ -5,7 +5,8 @@ var async = require('async')
 // materialized view names keyed on a set identifier
 var mvs = {
   crashes: [
-    "dw.fc_crashes_mv"
+    "dw.fc_crashes_mv",
+    "dw.fc_crashes_dau_mv"
   ]
 }
 
