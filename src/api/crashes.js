@@ -45,6 +45,39 @@ HAVING SUM(total) > 10
 ORDER BY total DESC
 `
 
+const CRASH_RATIO = `
+SELECT
+  version,
+  platform,
+  crashes,
+  total,
+  crash_rate
+FROM dw.fc_crashes_dau_mv
+WHERE
+  ymd >= current_date - cast($1 AS interval) AND
+  total > 50
+ORDER BY crash_rate DESC
+`
+
+const CRASH_REPORT_DETAILS_PLATFORM_VERSION = `
+SELECT
+  id,
+  ts,
+  contents->>'year_month_day'                                         AS ymd,
+  contents->>'_version'                                               AS version,
+  contents->>'platform'                                               AS platform,
+  COALESCE(contents->'metadata'->>'cpu', 'Unknown')                   AS cpu,
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')          AS crash_reason,
+  COALESCE(contents->'metadata'->>'signature', 'unknown')             AS signature,
+  COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown') AS operating_system_name
+FROM dtl.crashes
+WHERE
+  contents->>'platform' = $1 AND
+  contents->>'_version' = $2 AND
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($3 as INTERVAL)
+ORDER BY ts DESC
+`
+
 const RECENT_CRASH_REPORT_DETAILS = `
 SELECT
   id,
@@ -171,12 +204,53 @@ exports.setup = (server, client, mongo) => {
 
   server.route({
     method: 'GET',
+    path: '/api/1/crash_ratios',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10)
+      days += ' days'
+      let platforms = common.platformPostgresArray(request.query.platformFilter)
+      let channels = common.channelPostgresArray(request.query.channelFilter)
+      client.query(CRASH_RATIO, [days], (err, results) => {
+        if (err) {
+          console.log(err)
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => {
+            row.crashes = parseInt(row.crashes)
+            row.total = parseInt(row.total)
+            row.crash_rate = parseFloat(row.crash_rate)
+          })
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
     path: '/api/1/crash_report_details',
     handler: function (request, reply) {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       console.log(request.query)
       client.query(CRASH_REPORT_DETAILS, [request.query.platform, request.query.version, days, request.query.crash_reason, request.query.cpu, request.query.signature], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/crash_report_platform_version_details',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10)
+      days += ' days'
+      client.query(CRASH_REPORT_DETAILS_PLATFORM_VERSION, [request.query.platform, request.query.version, days], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {
