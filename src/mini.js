@@ -136,6 +136,19 @@ exports.readAndParse = (id, cb) => {
     send()
 }
 
+// Write symbolized crash report to the S3 crash bucket
+exports.writeParsedCrashToS3 = (id, symbolizedCrashReport, cb) => {
+  var k = `${id}.symbolized.txt`
+  console.log(`[${id}] symbolized crash report writing to ${S3_CRASH_BUCKET} as ${k}`)
+  var s3obj = new AWS.S3({
+    params: {
+      Bucket: S3_CRASH_BUCKET,
+      Key: k
+    }
+  })
+  s3obj.upload( { Body: symbolizedCrashReport } ).send(cb)
+}
+
 // Retrieve a binary minidump file from S3
 exports.readAndStore = (id, cb) => {
   var s3 = new AWS.S3()

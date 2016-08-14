@@ -75,8 +75,13 @@ const resourcesReady = function (asyncError, resources) {
                 }
                 console.log(`[${msgContents._id}] indexed in ElasticSearch`)
                 // done, ack the message and callback
-                resources.ch.ack(msg)
-                cb(null)
+                mini.writeParsedCrashToS3(msgContents._id, crashReport, function (s3WriteError) {
+                  if (esErr) {
+                    console.log(s3WriteError.toString())
+                  }
+                  resources.ch.ack(msg)
+                  cb(null)
+                })
               }
             )
           })
