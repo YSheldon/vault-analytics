@@ -172,6 +172,24 @@ exports.readAndStore = (id, cb) => {
     send()
 }
 
+export function readSymbolized (id, cb) {
+  var s3 = new AWS.S3()
+  var params = {
+    Bucket: S3_CRASH_BUCKET,
+    Key: id + '.symbolized.txt'
+  }
+  var done = function(err, data) {
+    var crashReport = ""
+    if (err) {
+      crashReport = 'Unavailable'
+    } else {
+      crashReport = data.Body.toString()
+    }
+    cb(null, crashReport)
+  }
+  s3.getObject(params, done)
+}
+
 const windowsVersionMatchers = [
   ['5.0', 'Windows 2000'],
   ['5.1', 'Windows XP'],

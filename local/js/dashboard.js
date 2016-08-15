@@ -674,9 +674,10 @@ router.get('crash/:id', function(req) {
       $("#contentTitle").html("Crash Report " + req.params.id)
       console.log(crash)
       table.empty()
-      _.each(_.keys(crash.crash.contents).sort(), function (k) {
-        if (!_.isObject(crash.crash.contents[k])) {
-          table.append('<tr><td>' + k + '</td><td>' + crash.crash.contents[k] + '</td></tr>')
+      var info = _.extend(_.clone(crash.crash.contents), crash.crash.contents.metadata || {})
+      _.each(_.keys(info).sort(), function (k) {
+        if (!_.isObject(info[k])) {
+          table.append('<tr><td>' + k + '</td><td>' + info[k] + '</td></tr>')
         }
       })
       $('#crash-detail-stack').html(crash.crash_report)

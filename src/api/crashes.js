@@ -288,7 +288,7 @@ exports.setup = (server, client, mongo) => {
     path: '/api/1/crash_report',
     handler: function (request, reply) {
       var id = request.query.id
-      crash.parsedCrash(client, id, (err, results) => {
+      crash.storedCrash(client, id, (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {

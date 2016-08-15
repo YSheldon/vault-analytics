@@ -38,3 +38,4 @@ tmp/
 
 # Heroku environment variables
 .env
+.env.*
