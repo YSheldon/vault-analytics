@@ -53,6 +53,18 @@ const resourcesReady = function (asyncError, resources) {
         // install the parser minidump metadata into the crash report
         msgContents.metadata = metadata
 
+        // Fill in missing info for crashes that come in without version / platform info (macOS generally)
+        if (!msgContents._version) {
+          msgContents._version = '0.0.0'
+        }
+        if (!msgContents.platform) {
+          if (msgContents.metadata.operating_system.match(/^Mac/)) {
+            msgContents.platform = 'darwin'
+          } else {
+            msgContents.platform = 'unknown'
+          }
+        }
+
         // Write the record to Postgres
         writeToPostgres(
           msgContents._id,
@@ -71,13 +83,13 @@ const resourcesReady = function (asyncError, resources) {
               { crash: msgContents },
               function (esErr, response) {
                 if (esErr) {
-                  console.log(esErr.toString())
+                  console.log(esErr)
                 }
                 console.log(`[${msgContents._id}] indexed in ElasticSearch`)
                 // done, ack the message and callback
                 mini.writeParsedCrashToS3(msgContents._id, crashReport, function (s3WriteError) {
-                  if (esErr) {
-                    console.log(s3WriteError.toString())
+                  if (s3WriteError) {
+                    console.log(s3WriteError)
                   }
                   resources.ch.ack(msg)
                   cb(null)
