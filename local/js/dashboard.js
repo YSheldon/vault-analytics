@@ -81,8 +81,15 @@ var round = function (x, n) {
 
 var crashVersionHandler = function(rows) {
   var s = $('#crash-ratio-versions')
+  s.empty()
+  s.append('<option value="">All</option>')
   _.each(rows, function (row) {
-    s.append('<option value="' + row.version + '">' + row.version + '</option>')
+    var buf = '<option value="' + row.version + '" '
+    if (pageState.version === row.version) {
+      buf = buf + 'SELECTED'
+    }
+    buf = buf + '>' + row.version + '</option>'
+    s.append(buf)
   })
 }
 
