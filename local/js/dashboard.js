@@ -79,7 +79,17 @@ var round = function (x, n) {
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
 }
 
+var crashVersionHandler = function(rows) {
+  var s = $('#crash-ratio-versions')
+  _.each(rows, function (row) {
+    s.append('<option value="' + row.version + '">' + row.version + '</option>')
+  })
+}
+
 var crashRatioHandler = function(rows) {
+  $.ajax('/api/1/crash_versions?' + standardParams(), {
+    success: crashVersionHandler
+  })
   var table = $('#crash-ratio-table tbody')
   table.empty()
   rows.forEach(function (row) {
@@ -298,7 +308,8 @@ var standardParams = function() {
     days: pageState.days,
     platformFilter: serializePlatformParams(),
     channelFilter: serializeChannelParams(),
-    showToday: pageState.showToday
+    showToday: pageState.showToday,
+    version: pageState.version
   })
 }
 
@@ -483,6 +494,7 @@ var menuItems = {
 var pageState = {
   currentlySelected: null,
   days: 14,
+  version: null,
   platformFilter: {
     osx: false,
     winx64: false,
@@ -500,6 +512,11 @@ var pageState = {
 
 $("#daysSelector").on('change', function (evt, value) {
   pageState.days = parseInt(this.value, 10)
+  refreshData()
+})
+
+$("#crash-ratio-versions").on('change', function (evt, value) {
+  pageState.version = this.value
   refreshData()
 })
 

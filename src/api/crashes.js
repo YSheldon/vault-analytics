@@ -56,7 +56,8 @@ FROM
 FROM dw.fc_crashes_dau_mv
 WHERE
   ymd >= current_date - cast($1 AS interval) AND
-  platform = ANY ($2)
+  platform = ANY ($2) AND
+  version = COALESCE($3, version)
 GROUP BY
   version,
   platform
@@ -227,7 +228,8 @@ exports.setup = (server, client, mongo) => {
       days += ' days'
       let platforms = common.platformPostgresArray(request.query.platformFilter)
       let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(CRASH_RATIO, [days, platforms], (err, results) => {
+      let version = request.query.version || null
+      client.query(CRASH_RATIO, [days, platforms, version], (err, results) => {
         if (err) {
           console.log(err)
           reply(err.toString()).code(500)
