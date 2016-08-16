@@ -138,6 +138,18 @@ GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
 
+const CRASH_VERSIONS = `
+SELECT
+  contents->>'_version' AS version,
+  count(1) as total
+FROM dtl.crashes
+WHERE
+  contents->>'_version' IS NOT NULL AND
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL)
+GROUP BY contents->>'_version'
+ORDER BY sp.comparable_version(contents->>'_version') DESC
+`
+
 exports.setup = (server, client, mongo) => {
 
     // Crash reports
@@ -314,6 +326,23 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/crash_versions',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 14, 10)
+      days += ' days'
+      client.query(CRASH_VERSIONS, [days], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
           reply(results.rows)
         }
       })
