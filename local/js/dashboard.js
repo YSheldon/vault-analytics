@@ -123,8 +123,8 @@ var topCrashHandler = function(rows) {
     var percentage = round(row.total / sum * 100, 1)
     buf = buf + '<td class="text-right"><a href="#crash_list/' + params + '">' + row.total + '</a><br/><span class="ago">' + percentage + '%</span></td>'
     buf = buf + '<td class="text-left">' + row.version + '</td>'
-    buf = buf + '<td class="text-left">' + row.platform + '</td>'
-    buf = buf + '<td class="text-left">' + row.cpu + '</td>'
+    buf = buf + '<td class="text-left">' + row.canonical_platform + '</td>'
+    buf = buf + '<td class="text-left">' + row.platform + ' ' + row.cpu + '</td>'
     buf = buf + '<td class="text-left">' + row.crash_reason + '<br/>' + row.signature + '</td>'
     buf = buf + '</tr>'
     table.append(buf)
@@ -391,8 +391,8 @@ var recentCrashesRetriever = function() {
         buf = buf + '<td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td>'
         buf = buf + '<td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td>'
         buf = buf + '<td>' + crash.version + '</td>'
-        buf = buf + '<td>' + crash.platform + '<br/><span class="ago">' + crash.operating_system_name + '</span></td>'
-        buf = buf + '<td>' + crash.cpu + '</td>'
+        buf = buf + '<td>' + crash.canonical_platform + '</td>'
+        buf = buf + '<td>' + crash.platform + ' ' + crash.cpu + '<br/><span class="ago">' + crash.operating_system_name + '</span></td>'
         buf = buf + '<td>' + crash.crash_reason + '<br/>' + crash.signature + '</td>'
         buf = buf + '</tr>'
         table.append(buf)

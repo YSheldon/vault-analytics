@@ -31,16 +31,19 @@ SELECT
   cpu,
   crash_reason,
   signature,
+  sp.canonical_platform(platform, cpu) as canonical_platform,
   SUM(total) AS total
 FROM dw.fc_crashes_mv
 WHERE
-  ymd >= current_date - cast($1 AS interval)
+  ymd >= current_date - cast($1 AS interval) AND
+  sp.canonical_platform(platform, cpu) = ANY ($2)
 GROUP BY
   version,
   platform,
   cpu,
   crash_reason,
-  signature
+  signature,
+  sp.canonical_platform(platform, cpu)
 HAVING SUM(total) > 10
 ORDER BY total DESC
 `
@@ -94,10 +97,12 @@ SELECT
   COALESCE(contents->'metadata'->>'cpu', 'Unknown')                   AS cpu,
   COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')          AS crash_reason,
   COALESCE(contents->'metadata'->>'signature', 'Unknown')             AS signature,
-  COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown') AS operating_system_name
+  COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown') AS operating_system_name,
+  sp.canonical_platform(contents->>'platform', contents->'metadata'->>'cpu') AS canonical_platform
 FROM dtl.crashes
 WHERE
-  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL)
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL) AND
+  sp.canonical_platform(contents->>'platform', contents->'metadata'->>'cpu') = ANY ($2)
 ORDER BY ts DESC
 LIMIT 100
 `
@@ -209,7 +214,7 @@ exports.setup = (server, client, mongo) => {
       days += ' days'
       let platforms = common.platformPostgresArray(request.query.platformFilter)
       let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(CRASH_REPORTS_SIGNATURE, [days], (err, results) => {
+      client.query(CRASH_REPORTS_SIGNATURE, [days, platforms], (err, results) => {
         if (err) {
           console.log(err)
           reply(err.toString()).code(500)
@@ -286,8 +291,9 @@ exports.setup = (server, client, mongo) => {
     handler: function (request, reply) {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
+      let platforms = common.platformPostgresArray(request.query.platformFilter)
       console.log(request.query)
-      client.query(RECENT_CRASH_REPORT_DETAILS, [days], (err, results) => {
+      client.query(RECENT_CRASH_REPORT_DETAILS, [days, platforms], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {
