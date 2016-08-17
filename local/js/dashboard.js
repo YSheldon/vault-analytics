@@ -98,9 +98,13 @@ var st = function (num) {
   return numeral(num).format('0,0')
 }
 
+var b = function(text) { return '<strong>' + text + "</strong>" }
+
 var overviewHandler = function (rows) {
   var groups = _.groupBy(rows, function (row) { return row.mobile })
   var desktop = groups[false].sort(function(a, b) { return b.count - a.count })
+  var mobile = groups[true].sort(function(a, b) { return b.count - a.count })
+
   var sumOfDesktop = _.reduce(desktop, function (memo, row) { return memo + row.count }, 0)
   var table = $("#overview-first-run-table-desktop tbody")
   table.empty()
@@ -112,7 +116,18 @@ var overviewHandler = function (rows) {
     buf = buf + "</tr>"
     table.append(buf)
   })
-  table.append(tr([td(), td(st(sumOfDesktop), 'right'), td()]))
+  table.append(tr([td(), td(b(st(sumOfDesktop)), 'right'), td()]))
+
+  table = $("#overview-first-run-table-mobile tbody")
+  table.empty()
+  _.each(mobile, function (row) {
+    var buf = '<tr>'
+    buf = buf + td(row.platform, 'left')
+    buf = buf + td(st(row.count), 'right')
+    buf = buf + td()
+    buf = buf + "</tr>"
+    table.append(buf)
+  })
 }
 
 var crashVersionHandler = function(rows) {
@@ -790,4 +805,3 @@ router.get('crash_list/:platform/:version/:days/:crash_reason/:cpu/:signature', 
     }
   })
 })
-

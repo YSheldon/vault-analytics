@@ -155,6 +155,7 @@ GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
 
+// We are using an number of different data sources in this query - hence the UNION
 const DAU_PLATFORM_FIRST_SUMMARY = `
 SELECT SM.platform, SM.count, PL.mobile, PL.vendor FROM (
 SELECT
@@ -163,9 +164,11 @@ SELECT
 FROM dw.fc_usage FC
 WHERE
   FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
-  first_time
+  first_time AND
+  ( sp.platform_mapping(FC.platform) <> 'ios' AND sp.platform_mapping(FC.platform) <> 'android' )
 GROUP BY sp.platform_mapping(FC.platform)
-  ORDER BY sp.platform_mapping(FC.platform)
+  UNION
+SELECT 'ios' AS platform, (SELECT SUM(downloads) FROM appannie.fc_inception_by_country) AS count
 ) SM JOIN dw.dm_platform PL ON SM.platform = PL.platform
 ORDER BY PL.mobile, PL.vendor
 `
