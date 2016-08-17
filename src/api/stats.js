@@ -155,6 +155,21 @@ GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
 
+const DAU_PLATFORM_FIRST_SUMMARY = `
+SELECT SM.platform, SM.count, PL.mobile, PL.vendor FROM (
+SELECT
+  sp.platform_mapping(FC.platform) AS platform,
+  SUM(FC.total) AS count
+FROM dw.fc_usage FC
+WHERE
+  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
+  first_time
+GROUP BY sp.platform_mapping(FC.platform)
+  ORDER BY sp.platform_mapping(FC.platform)
+) SM JOIN dw.dm_platform PL ON SM.platform = PL.platform
+ORDER BY PL.mobile, PL.vendor
+`
+
 const DAU_VERSION = `
 SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
@@ -314,6 +329,24 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // New users by platform summary
+  server.route({
+    method: 'GET',
+    path: '/api/1/dau_platform_first_summary',
+    handler: function (request, reply) {
+      // default to all time
+      let days = parseInt(request.query.days || 10000, 10) + ' days'
+      client.query(DAU_PLATFORM_FIRST_SUMMARY, [days], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
           reply(results.rows)
         }
       })

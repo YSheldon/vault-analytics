@@ -48,8 +48,24 @@ pgc.setup(function(err, pg) {
     })
   })
 
+  tap.test('sp.platform_mapping - unknown', function(t) {
+    pg.query("SELECT sp.platform_mapping('unknown') AS platform", [], function (err, results) {
+      t.equal(results.rows[0].platform, 'linux', 'unknown')
+      testCount += 1
+      t.end()
+    })
+  })
+
+  tap.test('sp.platform_mapping - osx', function(t) {
+    pg.query("SELECT sp.platform_mapping('osx') AS platform", [], function (err, results) {
+      t.equal(results.rows[0].platform, 'osx', 'osx')
+      testCount += 1
+      t.end()
+    })
+  })
+
   setInterval(function () {
-    if (testCount === 5) {
+    if (testCount === 7) {
       pg.end()
       process.exit(0)
     }
