@@ -79,6 +79,42 @@ var round = function (x, n) {
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
 }
 
+var td = function (contents, align, opts) {
+  contents = contents || ''
+  align = align || 'left'
+  opts = opts || {}
+  return '<td class="text-' + align + '">' + contents + '</td>'
+}
+
+var tr = function (tds, opts) {
+  tds = tds || []
+  opts = opts || {}
+  var buf = '<tr>' + tds.join('') + '</tr>'
+  return buf
+}
+
+// standard integer number format i.e. 123,456
+var st = function (num) {
+  return numeral(num).format('0,0')
+}
+
+var overviewHandler = function (rows) {
+  var groups = _.groupBy(rows, function (row) { return row.mobile })
+  var desktop = groups[false].sort(function(a, b) { return b.count - a.count })
+  var sumOfDesktop = _.reduce(desktop, function (memo, row) { return memo + row.count }, 0)
+  var table = $("#overview-first-run-table-desktop tbody")
+  table.empty()
+  _.each(desktop, function (row) {
+    var buf = '<tr>'
+    buf = buf + td(row.platform, 'left')
+    buf = buf + td(st(row.count), 'right')
+    buf = buf + td(numeral(row.count / sumOfDesktop).format('0.0%'), 'right')
+    buf = buf + "</tr>"
+    table.append(buf)
+  })
+  table.append(tr([td(), td(st(sumOfDesktop), 'right'), td()]))
+}
+
 var crashVersionHandler = function(rows) {
   var s = $('#crash-ratio-versions')
   s.empty()
@@ -419,11 +455,18 @@ var crashesVersionRetriever = function() {
   })
 }
 
+var overviewRetriever = function () {
+  $.ajax('/api/1/dau_platform_first_summary', {
+    success: overviewHandler
+  })
+}
+
 // Object of menu item meta data
 var menuItems = {
   "mnOverview": {
     show: "overviewContent",
-    title: "Overview"
+    title: "Overview",
+    retriever: overviewRetriever
   },
   "mnUsage": {
     show: "usageContent",
@@ -558,11 +601,12 @@ var refreshData = function() {
 // Setup menu handler routes
 var router = new Grapnel()
 
-/*router.get('|overview', function(req) {
+router.get('overview', function(req) {
   console.log('overview')
   pageState.currentlySelected = 'mnOverview'
   updatePageUIState()
-})*/
+  refreshData()
+})
 
 router.get('versions', function(req) {
   pageState.currentlySelected = 'mnVersions'
@@ -746,3 +790,4 @@ router.get('crash_list/:platform/:version/:days/:crash_reason/:cpu/:signature', 
     }
   })
 })
+
