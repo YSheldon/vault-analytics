@@ -77,3 +77,9 @@ exports.potentiallyFilterThisMonth = (rows, showMonth) => {
   }
   return rows
 }
+
+export function round (v, n) {
+  n = n || 2
+  var mult = Math.pow(10, n)
+  return parseInt(v * mult) / mult
+}

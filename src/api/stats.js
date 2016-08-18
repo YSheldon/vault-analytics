@@ -173,6 +173,11 @@ SELECT 'ios' AS platform, (SELECT SUM(downloads) FROM appannie.fc_inception_by_c
 ORDER BY PL.mobile, PL.vendor
 `
 
+const PLATFORM_SUMMARY_GEO = `
+SELECT 'ios' AS platform, FC.country_code, DM.name, '000' AS dma, FC.downloads
+FROM appannie.fc_inception_by_country FC JOIN appannie.dm_countries DM ON FC.country_code = DM.code
+`
+
 const DAU_VERSION = `
 SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
@@ -351,6 +356,29 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // New users by platform summary geo and dma
+  server.route({
+    method: 'GET',
+    path: '/api/1/dau_platform_first_summary_geo',
+    handler: function (request, reply) {
+      // default to all time
+      let days = parseInt(request.query.days || 10000, 10) + ' days'
+      client.query(PLATFORM_SUMMARY_GEO, [], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => { row.downloads = parseInt(row.downloads, 10) })
+          var grouped = _.groupBy(results.rows, (row) => { return row.platform })
+          _.each(grouped, (records, platform) => {
+            var sum = _.reduce(records, (memo, record) => { return memo + record.downloads }, 0)
+            _.each(records, (record) => { record.percentage = common.round(record.downloads / sum * 100, 1) })
+          })
+          reply(grouped)
         }
       })
     }

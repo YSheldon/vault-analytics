@@ -677,7 +677,6 @@ var refreshData = function() {
 var router = new Grapnel()
 
 router.get('overview', function(req) {
-  console.log('overview')
   pageState.currentlySelected = 'mnOverview'
   viewState.showControls = false
   updatePageUIState()
