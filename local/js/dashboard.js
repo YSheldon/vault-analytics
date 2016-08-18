@@ -575,6 +575,59 @@ var pageState = {
   showToday: false
 }
 
+var viewState = {
+  showControls: true,
+  platformEnabled: {
+    osx: true,
+    winx64: true,
+    winia32: true,
+    ios: true,
+    android: true
+  }
+}
+
+var enableAllPlatforms = function () {
+  viewState.platformEnabled = {
+    osx: true,
+    winx64: true,
+    winia32: true,
+    ios: true,
+    android: true
+  }
+}
+
+var disableAllPlatforms = function () {
+  viewState.platformEnabled = {
+    osx: false,
+    winx64: false,
+    winia32: false,
+    ios: false,
+    android: false
+  }
+}
+
+var enableDesktopPlatforms = function () {
+  viewState.platformEnabled.osx = true
+  viewState.platformEnabled.winia32 = true
+  viewState.platformEnabled.winx64 = true
+}
+
+var disableDesktopPlatforms = function () {
+  viewState.platformEnabled.osx = true
+  viewState.platformEnabled.winia32 = true
+  viewState.platformEnabled.winx64 = true
+}
+
+var enableMobilePlatforms = function () {
+  viewState.platformEnabled.ios = true
+  viewState.platformEnabled.android = true
+}
+
+var disableMobilePlatforms = function () {
+  viewState.platformEnabled.ios = false
+  viewState.platformEnabled.android = false
+}
+
 $("#daysSelector").on('change', function (evt, value) {
   pageState.days = parseInt(this.value, 10)
   refreshData()
@@ -604,6 +657,13 @@ var updatePageUIState = function() {
       $("#" + content).hide()
     }
   })
+
+  if (viewState.showControls) {
+    $('#controls').show()
+  } else {
+    $('#controls').hide()
+  }
+
 }
 
 // Load data for the selected item
@@ -619,63 +679,74 @@ var router = new Grapnel()
 router.get('overview', function(req) {
   console.log('overview')
   pageState.currentlySelected = 'mnOverview'
+  viewState.showControls = false
   updatePageUIState()
   refreshData()
 })
 
 router.get('versions', function(req) {
   pageState.currentlySelected = 'mnVersions'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
 
 router.get('usage', function(req) {
   pageState.currentlySelected = 'mnUsage'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
 
 router.get('usage_returning', function(req) {
   pageState.currentlySelected = 'mnUsageReturning'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
 
 router.get('usage_month', function(req) {
   pageState.currentlySelected = 'mnUsageMonth'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
 
 router.get('usage_month_agg', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAgg'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
 
 router.get('daily_new', function(req) {
   pageState.currentlySelected = 'mnDailyNew'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
 
 router.get('daily_usage_stats', function(req) {
   pageState.currentlySelected = 'mnDailyUsageStats'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
 
 router.get('usage_agg', function(req) {
   pageState.currentlySelected = 'mnUsageAgg'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
 
 router.get('top_crashes', function(req) {
   pageState.currentlySelected = 'mnTopCrashes'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
-    // Show and hide sub-sections
+
+  // Show and hide sub-sections
   $('#top-crash-table').show()
   $('#crash-detail').hide()
   $('#crash-list-table').hide()
@@ -683,6 +754,7 @@ router.get('top_crashes', function(req) {
 
 router.get('crash_ratio', function (req) {
   pageState.currentlySelected = 'mnCrashRatio'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 
@@ -698,34 +770,15 @@ router.get('recent_crashes', function(req) {
 
 router.get('crashes_platform_detail/:ymd/:platform', function(req) {
   pageState.currentlySelected = 'mnCrashesDetails'
+  viewState.showControls = true
   updatePageUIState()
   //refreshData()
 })
 
 router.get('crashes_platform_version', function(req) {
   pageState.currentlySelected = 'mnCrashesVersion'
+  viewState.showControls = true
   updatePageUIState()
-  refreshData()
-})
-
-// build platform button handlers
-_.forEach(platformKeys, function(id) {
-  $("#btn-filter-" + id).on('change', function() {
-    pageState.platformFilter[id] = this.checked
-    refreshData()
-  })
-})
-
-// build channel button handlers
-_.forEach(channelKeys, function(id) {
-  $("#btn-channel-" + id).on('change', function() {
-    pageState.channelFilter[id] = this.checked
-    refreshData()
-  })
-})
-
-$("#btn-show-today").on('change', function() {
-  pageState.showToday = this.checked
   refreshData()
 })
 
@@ -738,6 +791,7 @@ router.get('crashes_platform', function(req) {
 // Display a single crash report
 router.get('crash/:id', function(req) {
   pageState.currentlySelected = 'mnTopCrashes'
+  viewState.showControls = false
   updatePageUIState()
   // Show and hide sub-sections
   $('#top-crash-table').hide()
@@ -804,4 +858,25 @@ router.get('crash_list/:platform/:version/:days/:crash_reason/:cpu/:signature', 
       })
     }
   })
+})
+
+// build platform button handlers
+_.forEach(platformKeys, function(id) {
+  $("#btn-filter-" + id).on('change', function() {
+    pageState.platformFilter[id] = this.checked
+    refreshData()
+  })
+})
+
+// build channel button handlers
+_.forEach(channelKeys, function(id) {
+  $("#btn-channel-" + id).on('change', function() {
+    pageState.channelFilter[id] = this.checked
+    refreshData()
+  })
+})
+
+$("#btn-show-today").on('change', function() {
+  pageState.showToday = this.checked
+  refreshData()
 })
