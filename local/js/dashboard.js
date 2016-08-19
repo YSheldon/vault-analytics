@@ -344,7 +344,8 @@ var contents = [
   "statsContent",
   "topCrashContent",
   "recentCrashContent",
-  "crashRatioContent"
+  "crashRatioContent",
+  "searchContent"
 ]
 
 var serializePlatformParams = function () {
@@ -478,6 +479,11 @@ var overviewRetriever = function () {
 
 // Object of menu item meta data
 var menuItems = {
+  "mnSearch": {
+    show: "searchContent",
+    title: "Search",
+    retriever: function() {} // TODO
+  },
   "mnOverview": {
     show: "overviewContent",
     title: "Overview",
@@ -675,6 +681,13 @@ var refreshData = function() {
 
 // Setup menu handler routes
 var router = new Grapnel()
+
+router.get('search', function(req) {
+  pageState.currentlySelected = 'mnSearch'
+  viewState.showControls = false
+  updatePageUIState()
+  refreshData()
+})
 
 router.get('overview', function(req) {
   pageState.currentlySelected = 'mnOverview'
@@ -879,3 +892,49 @@ $("#btn-show-today").on('change', function() {
   pageState.showToday = this.checked
   refreshData()
 })
+
+var searchInputHandler = function (e) {
+  var q = this.value
+  console.log(q)
+  var table = $("#search-results-table tbody")
+  if (!q) {
+    $("#searchComments").hide()
+    table.empty()
+    return
+  }
+  $("#searchComments").html("Loading...")
+  $.ajax('/api/1/search?query=' + encodeURIComponent(q), {
+    success: function (results) {
+      table.empty()
+      console.log(results)
+      if (results.rowCount === 0) {
+        $("#searchComments").hide()
+      } else {
+        $("#searchComments").show()
+      }
+      if (results.rowCount > results.limit) {
+        $("#searchComments").html("Showing " + results.limit + ' of ' + results.rowCount + ' crashes')
+      } else {
+        $("#searchComments").html("Showing " + results.rowCount + ' crashes')
+      }
+      var crashes = results.crashes
+      _.each(crashes, function (crash, idx) {
+        table.append(tr([
+          td(idx + 1),
+          td('<a href="#crash/' + crash.id + '">' + crash.id + '</a>'),
+          td(crash.contents.ver),
+          td(crash.contents._version),
+          td(crash.contents.year_month_day),
+          td(crash.contents.platform + ' ' + crash.contents.metadata.cpu),
+          td(crash.contents.metadata.operating_system_name)
+          ]
+        ))
+        table.append(tr([td(), '<td colspan="7">' + crash.contents.metadata.signature + '</td>']))
+      })
+    }
+  })
+}
+
+$("#searchText").on('input', _.debounce(searchInputHandler, 500))
+
+$("#searchComments").hide()
