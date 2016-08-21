@@ -121,3 +121,7 @@ body {
     color: #999;
     font-style: italic;
 }
+
+.tag {
+    font-size: 125%;
+}

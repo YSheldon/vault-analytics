@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 var _ = require('underscore')
+var Joi = require('joi')
 
 var retriever = require('../retriever')
 var crash = require('../crash')
@@ -256,7 +257,6 @@ exports.setup = (server, client, mongo) => {
     handler: function (request, reply) {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
-      console.log(request.query)
       client.query(CRASH_REPORT_DETAILS, [request.query.platform, request.query.version, days, request.query.crash_reason, request.query.cpu, request.query.signature], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
@@ -292,7 +292,6 @@ exports.setup = (server, client, mongo) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       let platforms = common.platformPostgresArray(request.query.platformFilter)
-      console.log(request.query)
       client.query(RECENT_CRASH_REPORT_DETAILS, [days, platforms], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
@@ -351,6 +350,92 @@ exports.setup = (server, client, mongo) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  const POST_TAG = `
+  INSERT INTO dtl.crash_tags (crash_id, tag) VALUES ($1, $2) ON CONFLICT (crash_id, tag) DO NOTHING
+  `
+
+  server.route({
+    method: 'POST',
+    path: '/api/1/crashes/{id}/tags/{tag}',
+    config: {
+      validate: {
+        params: {
+          id: Joi.string().alphanum().required(),
+          tag: Joi.string().required(),
+        }
+      }
+    },
+    handler: function (request, reply) {
+      client.query(POST_TAG, [request.params.id, request.params.tag], (err, results) => {
+        if (err) {
+          console.log(err)
+          reply(err.toString()).code(500)
+        } else {
+          reply('OK').code(200)
+        }
+      })
+    }
+  })
+
+  const DELETE_TAG = `
+  DELETE FROM dtl.crash_tags WHERE crash_id = $1 AND tag = $2
+  `
+
+  server.route({
+    method: 'DELETE',
+    path: '/api/1/crashes/{id}/tags/{tag}',
+    config: {
+      validate: {
+        params: {
+          id: Joi.string().alphanum().required(),
+          tag: Joi.string().required(),
+        }
+      }
+    },
+    handler: function (request, reply) {
+      client.query(DELETE_TAG, [request.params.id, request.params.tag], (err, results) => {
+        if (err) {
+          console.log(err)
+          reply(err.toString()).code(500)
+        } else {
+          reply('OK').code(200)
+        }
+      })
+    }
+  })
+
+  const CRASH_TAGS = `SELECT crash_id, tag FROM dtl.crash_tags WHERE crash_id = $1`
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/crashes/{id}/tags',
+    handler: function (request, reply) {
+      client.query(CRASH_TAGS, [request.params.id], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  const AVAILABLE_CRASH_TAGS = `SELECT tag, description FROM dtl.crash_tags_available ORDER BY tag`
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/available_crash_tags',
+    handler: function (request, reply) {
+      client.query(AVAILABLE_CRASH_TAGS, [], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
           reply(results.rows)
         }
       })

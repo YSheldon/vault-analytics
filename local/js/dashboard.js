@@ -817,12 +817,59 @@ router.get('crash/:id', function(req) {
   $('#crash-download-container').empty()
   $('#crash-detail-stack').empty()
 
+  var loadAvailableCrashTags = function (id) {
+
+    $.ajax('/api/1/available_crash_tags', {
+      success: function (rows) {
+        var ul = $("#availableCrashTags")
+        ul.empty()
+        _.each(rows, function (row) {
+          ul.append('<li><a href="#" data-tag="' + row.tag + '">' + row.tag + '</a></li>')
+        })
+        $("#availableCrashTags a").on('click', function (e) {
+          var tag = $(e.target).attr('data-tag')
+          $.ajax({
+            method: "POST",
+            url: "/api/1/crashes/" + req.params.id + '/tags/' + tag,
+            success: function (results) {
+              loadCrashTags(id)
+            }
+          })
+        })
+      }
+    })
+  }
+
+  var loadCrashTags = function (id) {
+    $.ajax('/api/1/crashes/' + id + '/tags', {
+      success: function (rows) {
+        var buf = ''
+        _.each(rows, function (row) {
+            buf = buf + '<span class="label label-info tag">' + row.tag + ' <i class="fa fa-trash pointer" data-tag="' + row.tag + '"></i></span> '
+        })
+        $("#crash-tags").html(buf)
+        $("#crash-tags i").on("click", function (e) {
+          var i = $(this)
+          $.ajax({
+            method: 'DELETE',
+            url: '/api/1/crashes/' + id + '/tags/' + i.attr('data-tag'),
+            success: function (results) {
+              i.parent().remove()
+            }
+          })
+        })
+      }
+    })
+  }
+
   $.ajax('/api/1/crash_report?id=' + req.params.id, {
     success: function(crash) {
       $("#controls").hide()
       $("#contentTitle").html("Crash Report " + req.params.id)
       console.log(crash)
       table.empty()
+      loadAvailableCrashTags(req.params.id)
+      loadCrashTags(req.params.id)
       var info = _.extend(_.clone(crash.crash.contents), crash.crash.contents.metadata || {})
       _.each(_.keys(info).sort(), function (k) {
         if (!_.isObject(info[k])) {
@@ -830,7 +877,7 @@ router.get('crash/:id', function(req) {
         }
       })
       $('#crash-detail-stack').html(crash.crash_report)
-      $('#crash-download-container').html("<a class='btn btn-primary' href='/download/crash_report/" + req.params.id + "'>Download</a>")
+      $('#crash-download-container').html("<a class='btn btn-primary' href='/download/crash_report/" + req.params.id + "'>Download Binary Dump</a>")
     }
   })
 })
