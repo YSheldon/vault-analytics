@@ -9,8 +9,14 @@ var tokenize = function (text) {
 }
 
 const SEARCH = `
-select * from dtl.crashes where id in ( select object_id from (
-SELECT object_id, object_type, ts_rank(searchable, plainto_tsquery($1)) AS rank
+SELECT
+  *,
+  ARRAY(SELECT tag FROM dtl.crash_tags CT WHERE CR.id = CT.crash_id) AS tags
+FROM dtl.crashes CR where id in ( select object_id from (
+  SELECT
+  object_id,
+  object_type,
+  ts_rank(searchable, plainto_tsquery($1)) AS rank
 FROM dtl.fti
 WHERE searchable @@ plainto_tsquery($1)
 ORDER BY rank DESC

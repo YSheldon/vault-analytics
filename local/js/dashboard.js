@@ -973,7 +973,8 @@ var searchInputHandler = function (e) {
           td(crash.contents._version),
           td(crash.contents.year_month_day),
           td(crash.contents.platform + ' ' + crash.contents.metadata.cpu),
-          td(crash.contents.metadata.operating_system_name)
+          td(crash.contents.metadata.operating_system_name),
+          td(_.map(crash.tags, function (tag) { return '<span class="label label-info">' + tag + '</span>'}).join(' '))
           ]
         ))
         table.append(tr([td(), '<td colspan="7">' + crash.contents.metadata.signature + '</td>']))
