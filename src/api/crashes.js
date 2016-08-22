@@ -356,6 +356,13 @@ exports.setup = (server, client, mongo) => {
     }
   })
 
+  // We call reindexCrash outside of a trigger because the change to the crash_tags table
+  // in not visible until the SQL statement is complete. Issuing a NOP update allows
+  // the tags to be visibile to the indexing function.
+  function reindexCrash (client, id, done) {
+    client.query('UPDATE dtl.crashes SET id = id WHERE id = $1', [id], done)
+  }
+
   const POST_TAG = `
   INSERT INTO dtl.crash_tags (crash_id, tag) VALUES ($1, $2) ON CONFLICT (crash_id, tag) DO NOTHING
   `
@@ -377,7 +384,9 @@ exports.setup = (server, client, mongo) => {
           console.log(err)
           reply(err.toString()).code(500)
         } else {
-          reply('OK').code(200)
+          reindexCrash(client, request.params.id, (err, results) => {
+            reply('OK').code(200)
+          })
         }
       })
     }
@@ -400,11 +409,13 @@ exports.setup = (server, client, mongo) => {
     },
     handler: function (request, reply) {
       client.query(DELETE_TAG, [request.params.id, request.params.tag], (err, results) => {
+        console.log(results)
         if (err) {
-          console.log(err)
           reply(err.toString()).code(500)
         } else {
-          reply('OK').code(200)
+          reindexCrash(client, request.params.id, (err, results) => {
+            reply('OK').code(200)
+          })
         }
       })
     }
