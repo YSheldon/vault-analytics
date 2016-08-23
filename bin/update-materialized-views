@@ -6,7 +6,8 @@ var async = require('async')
 var mvs = {
   crashes: [
     "dw.fc_crashes_mv",
-    "dw.fc_crashes_dau_mv"
+    "dw.fc_crashes_dau_mv",
+    "dw.fc_crashes_process_type_mv"
   ]
 }
 
