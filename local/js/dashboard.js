@@ -105,6 +105,7 @@ var overviewHandler = function (rows) {
   var desktop = groups[false].sort(function(a, b) { return b.count - a.count })
   var mobile = groups[true].sort(function(a, b) { return b.count - a.count })
 
+  var sumOfAll = _.reduce(rows, function (memo, row) { return memo + row.count }, 0)
   var sumOfDesktop = _.reduce(desktop, function (memo, row) { return memo + row.count }, 0)
   var table = $("#overview-first-run-table-desktop tbody")
   table.empty()
@@ -113,21 +114,26 @@ var overviewHandler = function (rows) {
     buf = buf + td(row.platform, 'left')
     buf = buf + td(st(row.count), 'right')
     buf = buf + td(numeral(row.count / sumOfDesktop).format('0.0%'), 'right')
+    buf = buf + td(numeral(row.count / sumOfAll).format('0.0%'), 'right')
     buf = buf + "</tr>"
     table.append(buf)
   })
-  table.append(tr([td(), td(b(st(sumOfDesktop)), 'right'), td()]))
+  table.append(tr([td(), td(b(st(sumOfDesktop)), 'right'), td(numeral(sumOfDesktop / sumOfAll).format('0.0%'), 'right'), td()]))
 
+  var sumOfMobile = _.reduce(mobile, function (memo, row) { return memo + row.count }, 0)
   table = $("#overview-first-run-table-mobile tbody")
   table.empty()
   _.each(mobile, function (row) {
     var buf = '<tr>'
     buf = buf + td(row.platform, 'left')
     buf = buf + td(st(row.count), 'right')
-    buf = buf + td()
+    buf = buf + td(numeral(row.count / sumOfDesktop).format('0.0%'), 'right')
+    buf = buf + td(numeral(row.count / sumOfAll).format('0.0%'), 'right')
     buf = buf + "</tr>"
     table.append(buf)
   })
+  table.append(tr([td(), td(b(st(sumOfMobile)), 'right'), td(numeral(sumOfMobile / sumOfAll).format('0.0%'), 'right'), td()]))
+  table.append(tr([td(), td(b(st(sumOfAll)), 'right'), td(), td()]))
 }
 
 var crashVersionHandler = function(rows) {
