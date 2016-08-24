@@ -49,7 +49,7 @@ exports.setup = (server) => {
   // Login handler
   const login = function (request, reply) {
     if (request.auth.isAuthenticated) {
-      return reply.redirect('/dashboard')
+      return reply.redirect('/dashboard#overview')
     }
 
     let message = ''
@@ -77,13 +77,13 @@ exports.setup = (server) => {
         reply(err)
       }
       request.cookieAuth.set({ sid: sid })
-      return reply.redirect('/dashboard')
+      return reply.redirect('/dashboard#overview')
     })
   }
 
   const logout = function (request, reply) {
     request.cookieAuth.clear()
-    return reply.redirect('/dashboard')
+    return reply.redirect('/dashboard#overview')
   }
 
   // Static directory handling
@@ -153,7 +153,7 @@ exports.setup = (server) => {
     method: 'GET',
     path: '/',
     handler: function (request, reply) {
-      reply().redirect('/dashboard')
+      reply().redirect('/dashboard#overview')
     }
   })
 
