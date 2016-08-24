@@ -169,6 +169,8 @@ WHERE
 GROUP BY sp.platform_mapping(FC.platform)
   UNION
 SELECT 'ios' AS platform, (SELECT SUM(downloads) FROM appannie.fc_inception_by_country) AS count
+  UNION
+SELECT 'android' AS platform, (SELECT SUM(downloads) FROM appannie.fc_android_inception_by_country) AS count
 ) SM JOIN dw.dm_platform PL ON SM.platform = PL.platform
 ORDER BY PL.mobile, PL.vendor
 `

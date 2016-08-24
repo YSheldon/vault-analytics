@@ -76,7 +76,34 @@ export function downloadsByCountry (r, cb) {
     cb(JSON.parse(response).sales_list.map((country) => {
       return {
         country: country.country,
-        updates: country.units.product.updates,
+        updates: country.units.product.updates || 0,
+        downloads: country.units.product.downloads
+      }
+    }))
+  })
+}
+
+// Retrieve downloads and updates by country past a specific date in the following format:
+//
+// [
+//   {
+//     "country": "US",
+//     "updates": 0,
+//     "downloads": 200
+//   },
+//   ..
+// ]
+export function downloadsByCountryStart (r, start, cb) {
+  checkForCredentials()
+  var options = requestOptions(`${BASE_URL}/v1.2/accounts/${APPANNIE_ACCOUNT_ID}/products/${APPANNIE_PRODUCT_ID}/sales?break_down=country&start_date=${start}`)
+  r(options, (err, request, response) => {
+    if (err) {
+      throw new Error(err)
+    }
+    cb(JSON.parse(response).sales_list.map((country) => {
+      return {
+        country: country.country,
+        updates: country.units.product.updates || 0,
         downloads: country.units.product.downloads
       }
     }))
