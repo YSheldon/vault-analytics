@@ -6,18 +6,24 @@
 
 /*
 
-  Update the iOS country downloads and upgrades totals since inception
+  Update the Android country downloads and upgrades totals since inception
 
  */
+
+// Setup variables for Android
+process.env.APPANNIE_ACCOUNT_ID = process.env.APPANNIE_ANDROID_ACCOUNT_ID
+process.env.APPANNIE_PRODUCT_ID = process.env.APPANNIE_ANDROID_PRODUCT_ID
 
 const async = require('async')
 
 const appannie = require('../dist/appannie')
 const pgc = require('../dist/pgc')
 
+const startDate = process.env.START_DATE || '2016-01-20'
+
 const buildCountryInfoUpserter = function (pg, country) {
   return function (cb) {
-    pg.query("INSERT INTO appannie.fc_inception_by_country ( country_code, downloads, upgrades ) VALUES ( $1, $2, $3 ) ON CONFLICT (country_code) DO UPDATE SET downloads = $2, upgrades = $3", [country.country, country.downloads, country.updates], cb)
+    pg.query("INSERT INTO appannie.fc_android_inception_by_country ( country_code, downloads, upgrades ) VALUES ( $1, $2, $3 ) ON CONFLICT (country_code) DO UPDATE SET downloads = $2, upgrades = $3", [country.country, country.downloads, country.updates], cb)
   }
 }
 
@@ -25,7 +31,7 @@ pgc.setup(function(err, pg) {
   if (err) {
     throw new Error(err)
   }
-  appannie.downloadsByCountry(require('request'), function(countries) {
+  appannie.downloadsByCountryStart(require('request'), startDate, function(countries) {
     var funcs = countries.map(function (country) {
       return buildCountryInfoUpserter(pg, country)
     })
@@ -33,7 +39,7 @@ pgc.setup(function(err, pg) {
       if (asyncErr) {
         throw new Error(asyncErr)
       }
-      console.log('AppAnnie iOS downloads / upgrades updated')
+      console.log('AppAnnie Android downloads / upgrades updated')
       pg.end()
     })
   })
