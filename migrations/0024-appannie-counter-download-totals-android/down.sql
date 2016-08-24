@@ -1,0 +1,1 @@
+DROP TABLE appannie.fc_android_inception_by_country;
