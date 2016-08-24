@@ -140,6 +140,10 @@ exports.readAndParse = (id, cb) => {
 exports.writeParsedCrashToS3 = (id, symbolizedCrashReport, cb) => {
   var k = `${id}.symbolized.txt`
   console.log(`[${id}] symbolized crash report writing to ${S3_CRASH_BUCKET} as ${k} with length ${symbolizedCrashReport.length}`)
+  if (symbolizedCrashReport.length === 0) {
+    console.log(`[${id}] contains an invalid crash report - storing 'Invalid crash report'`)
+    symbolizedCrashReport = "Invalid crash report"
+  }
   var s3obj = new AWS.S3({
     params: {
       Bucket: S3_CRASH_BUCKET,
