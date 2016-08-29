@@ -44,11 +44,10 @@ export function recordsForPrefix (prefix, done) {
         Bucket: S3_LOG_BUCKET,
         Key: k
       }
-      console.log("Downloading " + k)
       s3.getObject(params, function (err, data) {
         if (!err) {
           console.log('Parsing ' + k)
-          allRecords += data.Body.toString()
+          allRecords += "\n" + data.Body.toString()
         }
         cb(err, data)
       })

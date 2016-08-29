@@ -31,6 +31,7 @@ const _ = require('underscore')
   dmaCode: 801 }
 
 */
+
 export const parseLine = (line) => {
   var attributes = {}
   var tokens = line.split(/\s+/)
@@ -42,12 +43,19 @@ export const parseLine = (line) => {
     var $, apiVersion, releases, channel, version, os
     [path, query] = url.split('?')
     let tokens = path.split('/')
+
+    // Legacy URLs are not handled by the parser (pre 0.8.0)
+    if (tokens.length !== 6) {
+      components.invalid = true
+      return components
+    }
+
     components.apiVersion = parseInt(tokens[1], 10)
     components.channel = tokens[3]
     components.version = tokens[4]
     components.platform = tokens[5]
     // legacy handling of undefined platform
-    if (components.platform === 'undefined') {
+    if (!components.platform || components.platform === 'undefined') {
       components.platform = 'linux'
     }
     components = _.extend(components, urlUtils.parse(url, true).query)
@@ -77,6 +85,7 @@ export const parseFile = (filename) => {
     .filter((line) => { return line.length })
     .filter((line) => { return line.match(/releases/) })
     .map((line) => { return parseLine(line) })
+    .filter((line) => { return !line.invalid })
 }
 
 export const parseContents = (contents) => {
@@ -84,6 +93,7 @@ export const parseContents = (contents) => {
     .filter((line) => { return line.length })
     .filter((line) => { return line.match(/releases/) })
     .map((line) => { return parseLine(line) })
+    .filter((line) => { return !line.invalid })
 }
 
 /*
