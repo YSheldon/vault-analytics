@@ -38,7 +38,7 @@ export function recordsForPrefix (prefix, done) {
   var allRecords = []
 
   // Build a function to download the contents of a single log file
-  var makeDownloader = function (k) {
+  var makeDownloader = function (k, percent) {
     return function (cb) {
       var params = {
         Bucket: S3_LOG_BUCKET,
@@ -46,7 +46,7 @@ export function recordsForPrefix (prefix, done) {
       }
       s3.getObject(params, function (err, data) {
         if (!err) {
-          console.log('Parsing ' + k)
+          console.log(percent + '% - Downloading and Parsing ' + k)
           allRecords += "\n" + data.Body.toString()
         }
         cb(err, data)
@@ -67,8 +67,8 @@ export function recordsForPrefix (prefix, done) {
       done(err, null)
     } else {
       console.log(data.Contents.length + ' files to process')
-      var funcs = data.Contents.map(function (contents) {
-        return makeDownloader(contents.Key)
+      var funcs = data.Contents.map(function (contents, i) {
+        return makeDownloader(contents.Key, Math.round(i / data.Contents.length * 100))
       })
       async.series(funcs, function (asyncError, results) {
         done(asyncError, logParser.parseContents(allRecords))
