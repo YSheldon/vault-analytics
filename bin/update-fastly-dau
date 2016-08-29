@@ -1,0 +1,99 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+var _ = require('underscore')
+var path = require('path')
+var async = require('async')
+var moment = require('moment')
+
+var pgc = require('../dist/pgc')
+var fls = require('../dist/fastly-log-summarizer')
+var flp = require('../dist/fastly-log-parser')
+var reporter = require('../dist/reporter')
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
+
+// Argument parsing
+var args = require('yargs')
+    .default('days_ago', 0)
+    .argv
+
+// default to X days ago
+var ymd = moment().subtract(args.days_ago, 'days').format('YYYY-MM-DD')
+
+// Allow ymd date override
+if (args.ymd) {
+  ymd = args.ymd
+}
+
+console.log(`Updating daily totals for laptop at ${ymd} from Fastly - ${jobName}`)
+
+QUERY = `
+INSERT INTO dw.fc_fastly_usage (ymd, platform, version, channel, first_time, country_code, dma, total)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT (ymd, platform, version, first_time, channel, country_code, dma) DO UPDATE SET total = $8
+`
+
+// Set field to 'unknown' or default value if not truthy
+var un = function(v, def) {
+  def = def || 'unknown'
+  return !v ? def : v
+}
+
+// Build function references to upsert daily stats
+var buildFastlyUsageUpserter = function (pg, ymd, record) {
+  return function (cb) {
+    var params = [
+      ymd,
+      un(record.platform),
+      un(record.version),
+      un(record.channel, 'dev'),
+      un(record.first),
+      un(record.countryCode),
+      un(record.dmaCode),
+      record.count
+    ]
+    pg.query(QUERY, params, cb)
+  }
+}
+
+// This is triggered when all resources have valid connections
+var resourcesReady = function(asyncError, resources) {
+  var cleanup = function () {
+    // Close connection to Postgres
+    resources.pg.end()
+  }
+
+  // Retrieve parsed S3 releases access records for a day
+  fls.recordsForDay(ymd, function (s3err, records) {
+    if (s3err) {
+      throw new Error(s3err)
+    }
+
+    // Group the records by dimension list
+    var summarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'first', 'countryCode', 'dmaCode'], { daily: true })
+
+    // Build array of function to insert / update into Postgres
+    var funcs = _.map(summarized, function (record) {
+      return buildFastlyUsageUpserter(resources.pg, ymd, record)
+    })
+
+    // Upsert rows
+    async.series(funcs, function(err, results) {
+      if (err) {
+        throw new Error(err)
+      }
+      // Report the results of the job run
+      reporter.shutdown(runInfo, resources.pg, cleanup)
+    })
+  })
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup
+}, resourcesReady)
