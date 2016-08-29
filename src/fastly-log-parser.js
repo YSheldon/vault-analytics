@@ -79,6 +79,13 @@ export const parseFile = (filename) => {
     .map((line) => { return parseLine(line) })
 }
 
+export const parseContents = (contents) => {
+  return contents.split(/\n/)
+    .filter((line) => { return line.length })
+    .filter((line) => { return line.match(/releases/) })
+    .map((line) => { return parseLine(line) })
+}
+
 /*
   Perform filtering and summarization of records
 
