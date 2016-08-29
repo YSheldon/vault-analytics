@@ -115,7 +115,7 @@ export const groupedSummaryBy = (records, fields, predicates) => {
 
   // group filtered records by the contents of a set of specified fields
   var grouped = _.groupBy(filtered, (obj) => {
-    return fields.map((field) => { return obj[field] })
+    return fields.map((field) => { return obj[field] }).join('~')
   })
 
   // calculate the number of records in each group
@@ -123,5 +123,17 @@ export const groupedSummaryBy = (records, fields, predicates) => {
   _.each(grouped, (v, k) => {
     results[k] = v.length
   })
-  return results
+
+  // Format the return value as array of objects
+  var finalRecords = _.map(results, (v, k) => {
+    var tokens = k.split('~')
+    var record = {}
+    _.each(tokens, (token, i) => {
+      record[fields[i]] = token
+    })
+    record.count = v
+    return record
+  })
+
+  return finalRecords
 }
