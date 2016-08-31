@@ -74,6 +74,7 @@ SELECT
   id,
   ts,
   contents->>'year_month_day'                                         AS ymd,
+  COALESCE(contents->>'ver', '0.0.0')                                 AS electron_version,
   contents->>'_version'                                               AS version,
   contents->>'platform'                                               AS platform,
   COALESCE(contents->'metadata'->>'cpu', 'Unknown')                   AS cpu,
@@ -92,13 +93,14 @@ const RECENT_CRASH_REPORT_DETAILS = `
 SELECT
   id,
   ts,
-  contents->>'year_month_day'                                         AS ymd,
-  contents->>'_version'                                               AS version,
-  contents->>'platform'                                               AS platform,
-  COALESCE(contents->'metadata'->>'cpu', 'Unknown')                   AS cpu,
-  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')          AS crash_reason,
-  COALESCE(contents->'metadata'->>'signature', 'Unknown')             AS signature,
-  COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown') AS operating_system_name,
+  contents->>'year_month_day'                                                AS ymd,
+  COALESCE(contents->>'ver', '0.0.0')                                        AS electron_version,
+  contents->>'_version'                                                      AS version,
+  contents->>'platform'                                                      AS platform,
+  COALESCE(contents->'metadata'->>'cpu', 'Unknown')                          AS cpu,
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')                 AS crash_reason,
+  COALESCE(contents->'metadata'->>'signature', 'Unknown')                    AS signature,
+  COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown')        AS operating_system_name,
   sp.canonical_platform(contents->>'platform', contents->'metadata'->>'cpu') AS canonical_platform
 FROM dtl.crashes
 WHERE
@@ -113,6 +115,7 @@ SELECT
   id,
   ts,
   contents->>'year_month_day'                                         AS ymd,
+  COALESCE(contents->>'ver', '0.0.0')                                 AS electron_version,
   contents->>'_version'                                               AS version,
   contents->>'platform'                                               AS platform,
   COALESCE(contents->'metadata'->>'cpu', 'Unknown')                   AS cpu,
