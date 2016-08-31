@@ -32,10 +32,16 @@ if (args.ymd) {
 
 console.log(`Updating daily totals for laptop at ${ymd} from Fastly - ${jobName}`)
 
-QUERY = `
+const QUERY = `
 INSERT INTO dw.fc_fastly_usage (ymd, platform, version, channel, first_time, country_code, dma, total)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (ymd, platform, version, first_time, channel, country_code, dma) DO UPDATE SET total = $8
+`
+
+const QUERY_MONTH = `
+INSERT INTO dw.fc_fastly_calendar_month_usage (ymd, platform, version, channel, country_code, dma, total)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (ymd, platform, version, channel, country_code, dma) DO UPDATE SET total = $7
 `
 
 // Set field to 'unknown' or default value if not truthy
@@ -61,6 +67,22 @@ var buildFastlyUsageUpserter = function (pg, ymd, record) {
   }
 }
 
+// Build function references to upsert monthly stats
+var buildFastlyMonthUsageUpserter = function (pg, ymd, record) {
+  return function (cb) {
+    var params = [
+      ymd,
+      un(record.platform),
+      un(record.version),
+      un(record.channel, 'dev'),
+      un(record.countryCode),
+      un(record.dmaCode),
+      record.count
+    ]
+    pg.query(QUERY_MONTH, params, cb)
+  }
+}
+
 // This is triggered when all resources have valid connections
 var resourcesReady = function(asyncError, resources) {
   var cleanup = function () {
@@ -74,16 +96,33 @@ var resourcesReady = function(asyncError, resources) {
       throw new Error(s3err)
     }
 
+//    console.log(records.filter(function (record) {
+//      return record.monthly && record.platform === 'osx'
+//    }).length)
+
+    // Select monthly records
+    var monthlySummarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'countryCode', 'dmaCode'], { monthly: true })
+
+//    console.log(_.reduce(monthlySummarized, function (memo, record) { return memo + record.count }, 0))
+
     // Group the records by dimension list
     var summarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'first', 'countryCode', 'dmaCode'], { daily: true })
 
-    // Build array of function to insert / update into Postgres
-    var funcs = _.map(summarized, function (record) {
+    // Build array of function to insert / update DAU into Postgres
+    var dayFuncs = _.map(summarized, function (record) {
       return buildFastlyUsageUpserter(resources.pg, ymd, record)
     })
 
+    // Build array of function to insert / update MAU (by day) into Postgres
+    var monthFuncs = _.map(monthlySummarized, function (record) {
+      return buildFastlyMonthUsageUpserter(resources.pg, ymd, record)
+    })
+
+    // Build the complete function list
+    var allFuncs = dayFuncs.concat(monthFuncs)
+
     // Upsert rows
-    async.series(funcs, function(err, results) {
+    async.series(allFuncs, function(err, results) {
       if (err) {
         throw new Error(err)
       }
