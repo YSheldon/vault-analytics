@@ -160,6 +160,18 @@ GROUP BY contents->>'_version'
 ORDER BY sp.comparable_version(contents->>'_version') DESC
 `
 
+const CRASH_ELECTRON_VERSIONS = `
+SELECT
+  contents->>'ver' AS electron_version,
+  count(1) as total
+FROM dtl.crashes
+WHERE
+  contents->>'ver' IS NOT NULL AND
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL)
+GROUP BY contents->>'ver'
+ORDER BY sp.comparable_version(contents->>'ver') DESC
+`
+
 exports.setup = (server, client, mongo) => {
 
     // Crash reports
@@ -349,6 +361,23 @@ exports.setup = (server, client, mongo) => {
       let days = parseInt(request.query.days || 14, 10)
       days += ' days'
       client.query(CRASH_VERSIONS, [days], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/crash_electron_versions',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 14, 10)
+      days += ' days'
+      client.query(CRASH_ELECTRON_VERSIONS, [days], (err, results) => {
         if (err) {
           reply(err.toString()).code(500)
         } else {
