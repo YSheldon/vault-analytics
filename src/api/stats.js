@@ -112,6 +112,12 @@ WHERE
 ORDER BY FC.ymd DESC
 `
 
+const EYESHADE_WALLETS_TOTAL = `
+SELECT
+  SUM(total) AS count
+FROM dw.fc_eyeshade_wallets
+`
+
 const DAU_PLATFORM_MINUS_FIRST = `
 SELECT
   USAGE.ymd,
@@ -410,6 +416,24 @@ exports.setup = (server, client, mongo) => {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
           reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Ledger overview summary statistics
+  server.route({
+    method: 'GET',
+    path: '/api/1/ledger_overview',
+    handler: function (request, reply) {
+      client.query(EYESHADE_WALLETS_TOTAL, [], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          var overview = {
+            wallets: results.rows[0].count
+          }
+          reply(overview)
         }
       })
     }

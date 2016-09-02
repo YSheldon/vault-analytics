@@ -100,7 +100,8 @@ var st = function (num) {
 
 var b = function(text) { return '<strong>' + text + "</strong>" }
 
-var overviewHandler = function (rows) {
+var overviewHandler = function (rows, overview) {
+  $("#ledger-wallet-count").html(overview.wallets + ' wallets')
   var groups = _.groupBy(rows, function (row) { return row.mobile })
   var desktop = groups[false].sort(function(a, b) { return b.count - a.count })
   var mobile = groups[true].sort(function(a, b) { return b.count - a.count })
@@ -479,7 +480,13 @@ var crashesVersionRetriever = function() {
 
 var overviewRetriever = function () {
   $.ajax('/api/1/dau_platform_first_summary', {
-    success: overviewHandler
+    success: function(rows) {
+      $.ajax('/api/1/ledger_overview', {
+        success: function(overview) {
+          overviewHandler(rows, overview)
+        }
+      })
+    }
   })
 }
 
