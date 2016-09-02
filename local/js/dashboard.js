@@ -483,6 +483,12 @@ var overviewRetriever = function () {
   })
 }
 
+var eyeshadeRetriever = function() {
+  $.ajax('/api/1/eyeshade_wallets?' + standardParams(), {
+    success: usagePlatformHandler
+  })
+}
+
 // Object of menu item meta data
 var menuItems = {
   "mnSearch": {
@@ -564,6 +570,11 @@ var menuItems = {
     title: "Crash Details",
     show: "usageContent",
     retriever: crashesDetailRetriever
+  },
+  "mnEyeshade": {
+    show: "usageContent",
+    title: "Daily Ledger Wallets",
+    retriever: eyeshadeRetriever
   },
 }
 
@@ -802,6 +813,13 @@ router.get('crashes_platform_version', function(req) {
 
 router.get('crashes_platform', function(req) {
   pageState.currentlySelected = 'mnCrashes'
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('eyeshade', function(req) {
+  pageState.currentlySelected = 'mnEyeshade'
+  viewState.showControls = true
   updatePageUIState()
   refreshData()
 })
