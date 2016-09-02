@@ -89,7 +89,11 @@ var td = function (contents, align, opts) {
 var tr = function (tds, opts) {
   tds = tds || []
   opts = opts || {}
-  var buf = '<tr>' + tds.join('') + '</tr>'
+  var buf = '<tr '
+  if (opts.classes) {
+    buf += ' class="' + opts.classes + '" '
+  }
+  buf += '>' + tds.join('') + '</tr>'
   return buf
 }
 
@@ -250,19 +254,19 @@ var statsHandler = function(rows) {
 }
 
 // Build a handler for a successful API request
-var buildSuccessHandler = function (x, y, x_label, y_label, count_link_func) {
-  if (!count_link_func) {
-    count_link_func = function(row, count) {
-      return count
-    }
+var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
+  opts = opts || {}
+
+  var count_link_func = function(row, count) {
+    return count
   }
 
   return function(rows) {
-
     var table = $('#usageDataTable tbody')
     table.empty()
     var ctrl = rows[x]
     var ctrlClass = ''
+    var grandTotalAccumulator = 0
     rows.forEach(function(row) {
       if (row[x] !== ctrl) {
         // The ctrl has broken, we need to change grouping
@@ -282,7 +286,17 @@ var buildSuccessHandler = function (x, y, x_label, y_label, count_link_func) {
       }
       buf = buf + '</tr>'
       table.append(buf)
+      grandTotalAccumulator += row.count
     })
+
+    // Show grand total line if option present
+    if (opts.showGrandTotal) {
+      table.append(tr([
+        td(),
+        td(),
+        td(grandTotalAccumulator, 'right')
+      ], { classes: "info" }))
+    }
 
     // Build a list of unique labels (ymd)
     var labels = _.chain(rows)
@@ -339,9 +353,9 @@ var buildSuccessHandler = function (x, y, x_label, y_label, count_link_func) {
 // Data type success handlers
 var usagePlatformHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform')
 var usageVersionHandler = buildSuccessHandler('ymd', 'version', 'Date', 'Version')
-var usageCrashesHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', function(row, count) {
-  return "<a href='#crashes_platform_detail/" + row.ymd + "/" + row.platform + "'>" + count + "</a>"
-})
+var usageCrashesHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform')
+
+var walletsHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: true })
 
 // Array of content panels
 var contents = [
@@ -492,7 +506,7 @@ var overviewRetriever = function () {
 
 var eyeshadeRetriever = function() {
   $.ajax('/api/1/eyeshade_wallets?' + standardParams(), {
-    success: usagePlatformHandler
+    success: walletsHandler
   })
 }
 
