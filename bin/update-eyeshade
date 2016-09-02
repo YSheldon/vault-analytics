@@ -1,0 +1,76 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+var async = require('async')
+var _ = require('underscore')
+var path = require('path')
+
+// Set the runtime Mongo URL to eyeshade
+process.env.MONGOLAB_URI = process.env.EYESHADE_URI
+
+var mongoc = require('../dist/mongoc')
+var pgc = require('../dist/pgc')
+var eyeshade = require('../dist/eyeshade')
+var reporter = require('../dist/reporter')
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
+
+console.log('Update eyeshade wallet count by day - ' + jobName)
+
+const QUERY = `
+INSERT INTO dw.fc_eyeshade_wallets (ymd, total)
+VALUES ($1, $2)
+ON CONFLICT (ymd) DO UPDATE SET total = $2
+`
+
+// Build function references to upsert daily stats
+var buildEyeshadeWalletsUpserter = function (pg, record) {
+  return function (cb) {
+    var params = [
+      record.ymd,
+      record.count
+    ]
+    pg.query(QUERY, params, cb)
+  }
+}
+
+// This is triggered when all resources have valid connections
+var resourcesReady = function(asyncError, resources) {
+  var cleanup = function () {
+    // Close connections to Postgres and Mongo
+    resources.pg.end()
+    resources.mg.close()
+  }
+
+  eyeshade.walletsCreatedByDay(resources.mg, function(err, results) {
+    if (err) {
+      console.log(err)
+    }
+
+    // Build array of function to insert / update DAU into Postgres
+    var dayFuncs = _.map(results, function (record) {
+      record.ymd = record._id.ymd
+      delete record._id
+      return buildEyeshadeWalletsUpserter(resources.pg, record)
+    })
+
+    // Upsert rows
+    async.series(dayFuncs, function(err, results) {
+      if (err) {
+        throw new Error(err)
+      }
+      // Report the results of the job run
+      reporter.shutdown(runInfo, resources.pg, cleanup)
+    })
+  })
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup,
+  mg: mongoc.setup
+}, resourcesReady)
