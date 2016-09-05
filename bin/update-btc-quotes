@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+var async = require('async')
+var _ = require('underscore')
+var path = require('path')
+var request = require('request')
+
+var pgc = require('../dist/pgc')
+var reporter = require('../dist/reporter')
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
+
+console.log('Update btc quotes - ' + jobName)
+
+function buildBTCUpserter (client, row) {
+  return function (cb) {
+    client.query("INSERT INTO dw.btc_quotes (currency_code, quote) VALUES ($1, $2) ON CONFLICT (currency_code) DO UPDATE SET quote = $2", [row.code, row.rate_float], cb)
+  }
+}
+
+// This is triggered when all resources have valid connections
+var resourcesReady = function(asyncError, resources) {
+  var cleanup = function () {
+    // Close connections
+    resources.pg.end()
+  }
+
+  request('http://api.coindesk.com/v1/bpi/currentprice.json', function(err, response) {
+    var quotes = JSON.parse(response.body).bpi
+
+    var funcs = _.map(quotes, function (v, k) {
+      return buildBTCUpserter(resources.pg, v)
+    })
+
+    async.series(funcs, function(asyncError, results) {
+      if (err) {
+        throw new Error(asyncError)
+      }
+      reporter.shutdown(runInfo, resources.pg, cleanup)
+    })
+  })
+
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup
+}, resourcesReady)

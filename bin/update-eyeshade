@@ -22,20 +22,39 @@ var runInfo = reporter.startup(jobName)
 console.log('Update eyeshade wallet count by day - ' + jobName)
 
 const QUERY = `
-INSERT INTO dw.fc_eyeshade_wallets (ymd, total)
-VALUES ($1, $2)
-ON CONFLICT (ymd) DO UPDATE SET total = $2
+INSERT INTO dtl.eyeshade_wallets (id, created_ts, created, updated_ts, updated, financial_balance, financial_spendable, financial_confirmed, financial_unconfirmed)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (id) DO UPDATE SET
+created_ts = $2,
+created = $3,
+updated_ts = $4,
+updated = $5,
+financial_balance = $6,
+financial_spendable = $7,
+financial_confirmed = $8,
+financial_unconfirmed = $9
 `
 
 // Build function references to upsert daily stats
 var buildEyeshadeWalletsUpserter = function (pg, record) {
   return function (cb) {
     var params = [
-      record.ymd,
-      record.count
+      record.id,
+      record.created_ts,
+      record.created,
+      record.updated_ts,
+      record.updated,
+      record.financial_balance,
+      record.financial_spendable,
+      record.financial_confirmed,
+      record.financial_unconfirmed
     ]
     pg.query(QUERY, params, cb)
   }
+}
+
+var updateMaterializedViews = function (pg, cb) {
+  pg.query('REFERESH MATERIALIZED VIEW dw.fc_wallets_fc', [], cb)
 }
 
 // This is triggered when all resources have valid connections
@@ -46,15 +65,12 @@ var resourcesReady = function(asyncError, resources) {
     resources.mg.close()
   }
 
-  eyeshade.walletsCreatedByDay(resources.mg, function(err, results) {
+  eyeshade.wallets(resources.mg, function(err, results) {
     if (err) {
       console.log(err)
     }
 
-    // Build array of function to insert / update DAU into Postgres
     var dayFuncs = _.map(results, function (record) {
-      record.ymd = record._id.ymd
-      delete record._id
       return buildEyeshadeWalletsUpserter(resources.pg, record)
     })
 
@@ -63,8 +79,10 @@ var resourcesReady = function(asyncError, resources) {
       if (err) {
         throw new Error(err)
       }
-      // Report the results of the job run
-      reporter.shutdown(runInfo, resources.pg, cleanup)
+      updateMaterializedViews(resources.pg, function(err, results) {
+        // Report the results of the job run
+        reporter.shutdown(runInfo, resources.pg, cleanup)
+      })
     })
   })
 }
