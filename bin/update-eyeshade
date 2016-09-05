@@ -54,7 +54,7 @@ var buildEyeshadeWalletsUpserter = function (pg, record) {
 }
 
 var updateMaterializedViews = function (pg, cb) {
-  pg.query('REFERESH MATERIALIZED VIEW dw.fc_wallets_fc', [], cb)
+  pg.query('REFRESH MATERIALIZED VIEW dw.fc_wallets_mv', [], cb)
 }
 
 // This is triggered when all resources have valid connections
