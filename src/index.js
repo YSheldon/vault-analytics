@@ -16,6 +16,7 @@ let jobs = require('./api/jobs')
 let stats = require('./api/stats')
 let crashes = require('./api/crashes')
 let search = require('./api/search')
+let eyeshade = require('./api/eyeshade')
 
 let setGlobalHeader = require('hapi-set-header')
 
@@ -47,7 +48,7 @@ let kickoff = (err, connections) => {
   })
 
   // Setup the APIs
-  _.each([stats, jobs, crashes, search], (api) => { api.setup(server, connections.pg, connections.mg) })
+  _.each([stats, jobs, crashes, search, eyeshade], (api) => { api.setup(server, connections.pg, connections.mg) })
 
   // Setup the UI for the dashboard
   ui.setup(server)

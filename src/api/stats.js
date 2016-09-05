@@ -102,22 +102,6 @@ GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
 
-const EYESHADE_WALLETS = `
-SELECT
-  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
-  FC.total AS count
-FROM dw.fc_eyeshade_wallets FC
-WHERE
-  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date)
-ORDER BY FC.ymd DESC
-`
-
-const EYESHADE_WALLETS_TOTAL = `
-SELECT
-  SUM(total) AS count
-FROM dw.fc_eyeshade_wallets
-`
-
 const DAU_PLATFORM_MINUS_FIRST = `
 SELECT
   USAGE.ymd,
@@ -397,43 +381,6 @@ exports.setup = (server, client, mongo) => {
             _.each(records, (record) => { record.percentage = common.round(record.downloads / sum * 100, 1) })
           })
           reply(grouped)
-        }
-      })
-    }
-  })
-
-  // Eyeshade / ledger wallets by day
-  server.route({
-    method: 'GET',
-    path: '/api/1/eyeshade_wallets',
-    handler: function (request, reply) {
-      let days = parseInt(request.query.days || 7, 10)
-      days += ' days'
-      client.query(EYESHADE_WALLETS, [days], (err, results) => {
-        if (err) {
-          reply(err.toString()).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          reply(results.rows)
-        }
-      })
-    }
-  })
-
-  // Ledger overview summary statistics
-  server.route({
-    method: 'GET',
-    path: '/api/1/ledger_overview',
-    handler: function (request, reply) {
-      client.query(EYESHADE_WALLETS_TOTAL, [], (err, results) => {
-        if (err) {
-          reply(err.toString()).code(500)
-        } else {
-          var overview = {
-            wallets: results.rows[0].count
-          }
-          reply(overview)
         }
       })
     }
