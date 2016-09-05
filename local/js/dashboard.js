@@ -105,7 +105,51 @@ var st = function (num) {
 var b = function(text) { return '<strong>' + text + "</strong>" }
 
 var overviewHandler = function (rows, overview) {
-  $("#ledger-wallet-count").html(overview.wallets + ' wallets')
+
+  var overviewTable = $("#overview-ledger-table tbody")
+  overviewTable.empty()
+
+  overviewTable.append(tr([
+    td("Wallets"),
+    td(overview.wallets, "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("Funded wallets"),
+    td(overview.funded, "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("Percentage of wallets funded"),
+    td(round(overview.funded / overview.wallets * 100, 1) + '%', "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("USD / BTC"),
+    td(round(overview.btc_usd, 2), "right"),
+    td('USD')
+  ]))
+  overviewTable.append(tr([
+    td("Total balance of funded wallets"),
+    td(round(overview.balance / 100000000, 3), "right"),
+    td('BTC')
+  ]))
+  overviewTable.append(tr([
+    td(),
+    td(round(overview.balance / 100000000 * overview.btc_usd, 2), "right"),
+    td('USD')
+  ]))
+  overviewTable.append(tr([
+    td("Average balance of funded wallets"),
+    td(round((overview.balance / overview.funded) / 100000000, 6), "right"),
+    td('BTC')
+  ]))
+  overviewTable.append(tr([
+    td(),
+    td(round((overview.balance / overview.funded) / 100000000 * overview.btc_usd, 2), "right"),
+    td('USD')
+  ]))
+
   var groups = _.groupBy(rows, function (row) { return row.mobile })
   var desktop = groups[false].sort(function(a, b) { return b.count - a.count })
   var mobile = groups[true].sort(function(a, b) { return b.count - a.count })
@@ -355,7 +399,9 @@ var usagePlatformHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platf
 var usageVersionHandler = buildSuccessHandler('ymd', 'version', 'Date', 'Version')
 var usageCrashesHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform')
 
-var walletsHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: true })
+var walletsTotalHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: true })
+
+var walletsHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: false })
 
 // Array of content panels
 var contents = [
@@ -506,6 +552,30 @@ var overviewRetriever = function () {
 
 var eyeshadeRetriever = function() {
   $.ajax('/api/1/eyeshade_wallets?' + standardParams(), {
+    success: walletsTotalHandler
+  })
+}
+
+var eyeshadeFundedRetriever = function() {
+  $.ajax('/api/1/eyeshade_funded_wallets?' + standardParams(), {
+    success: walletsTotalHandler
+  })
+}
+
+var eyeshadeFundedPercentageRetriever = function() {
+  $.ajax('/api/1/eyeshade_funded_percentage_wallets?' + standardParams(), {
+    success: walletsHandler
+  })
+}
+
+var eyeshadeFundedBalanceRetriever = function() {
+  $.ajax('/api/1/eyeshade_funded_balance_wallets?' + standardParams(), {
+    success: walletsTotalHandler
+  })
+}
+
+var eyeshadeFundedBalanceAverageRetriever = function() {
+  $.ajax('/api/1/eyeshade_funded_balance_average_wallets?' + standardParams(), {
     success: walletsHandler
   })
 }
@@ -595,7 +665,32 @@ var menuItems = {
   "mnEyeshade": {
     show: "usageContent",
     title: "Daily Ledger Wallets",
+    subtitle: "Number of ledger wallets created per day",
     retriever: eyeshadeRetriever
+  },
+  "mnFundedEyeshade": {
+    show: "usageContent",
+    title: "Daily Ledger Funded Wallets",
+    subtitle: "Number of funded ledger wallets created per day",
+    retriever: eyeshadeFundedRetriever
+  },
+  "mnFundedPercentageEyeshade": {
+    show: "usageContent",
+    title: "Daily Ledger Funded Wallets Percentage",
+    subtitle: "Percentage of wallets created that are funded per day",
+    retriever: eyeshadeFundedPercentageRetriever
+  },
+  "mnFundedBalanceEyeshade": {
+    show: "usageContent",
+    title: "Daily Ledger Funded Wallets Balance",
+    subtitle: "Total balance of funded wallets per day in BTC",
+    retriever: eyeshadeFundedBalanceRetriever
+  },
+  "mnFundedBalanceAverageEyeshade": {
+    show: "usageContent",
+    title: "Daily Ledger Funded Wallets Average Balance",
+    subtitle: "Average balance of funded wallets per day in BTC",
+    retriever: eyeshadeFundedBalanceAverageRetriever
   },
 }
 
@@ -691,6 +786,7 @@ var updatePageUIState = function() {
     } else {
       $("#" + id).parent().addClass("active")
       $("#contentTitle").text(menuItems[id].title)
+      $("#contentSubtitle").text(menuItems[id].subtitle || '')
     }
   })
 
@@ -840,6 +936,34 @@ router.get('crashes_platform', function(req) {
 
 router.get('eyeshade', function(req) {
   pageState.currentlySelected = 'mnEyeshade'
+  viewState.showControls = true
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('eyeshade_funded', function(req) {
+  pageState.currentlySelected = 'mnFundedEyeshade'
+  viewState.showControls = true
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('eyeshade_funded_percentage', function(req) {
+  pageState.currentlySelected = 'mnFundedPercentageEyeshade'
+  viewState.showControls = true
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('eyeshade_funded_balance', function(req) {
+  pageState.currentlySelected = 'mnFundedBalanceEyeshade'
+  viewState.showControls = true
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('eyeshade_funded_balance_average', function(req) {
+  pageState.currentlySelected = 'mnFundedBalanceAverageEyeshade'
   viewState.showControls = true
   updatePageUIState()
   refreshData()

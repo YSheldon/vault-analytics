@@ -130,3 +130,10 @@ body {
     font-size: 150%;
 }
 
+.content-subtitle {
+    font-size: 150%;
+    color: #999;
+    font-style: italic;
+    margin-bottom: 20px;
+    margin-top: -10px;
+}
