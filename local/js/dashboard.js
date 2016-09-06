@@ -102,6 +102,11 @@ var st = function (num) {
   return numeral(num).format('0,0')
 }
 
+// standard dollar number format i.e. 123,456.78
+var std = function (num) {
+  return numeral(num).format('0,0.00')
+}
+
 var b = function(text) { return '<strong>' + text + "</strong>" }
 
 var overviewHandler = function (rows, overview) {
@@ -111,43 +116,43 @@ var overviewHandler = function (rows, overview) {
 
   overviewTable.append(tr([
     td("Wallets"),
-    td(overview.wallets, "right"),
+    td(st(overview.wallets), "right"),
     td()
   ]))
   overviewTable.append(tr([
     td("Funded wallets"),
-    td(overview.funded, "right"),
+    td(st(overview.funded), "right"),
     td()
   ]))
   overviewTable.append(tr([
     td("Percentage of wallets funded"),
-    td(round(overview.funded / overview.wallets * 100, 1) + '%', "right"),
+    td(numeral(overview.funded / overview.wallets).format('0.0%'), "right"),
     td()
   ]))
   overviewTable.append(tr([
-    td("USD / BTC"),
-    td(round(overview.btc_usd, 2), "right"),
-    td('USD')
+    td("USD / 1 BTC"),
+    td(std(overview.btc_usd), "right"),
+    td('$ USD')
   ]))
   overviewTable.append(tr([
     td("Total balance of funded wallets"),
     td(round(overview.balance / 100000000, 3), "right"),
-    td('BTC')
+    td('<i class="fa fa-btc" aria-hidden="true"></i>')
   ]))
   overviewTable.append(tr([
     td(),
-    td(round(overview.balance / 100000000 * overview.btc_usd, 2), "right"),
-    td('USD')
+    td(std(overview.balance / 100000000 * overview.btc_usd), "right"),
+    td('$ USD')
   ]))
   overviewTable.append(tr([
     td("Average balance of funded wallets"),
     td(round((overview.balance / overview.funded) / 100000000, 6), "right"),
-    td('BTC')
+    td('<i class="fa fa-btc" aria-hidden="true"></i>')
   ]))
   overviewTable.append(tr([
     td(),
-    td(round((overview.balance / overview.funded) / 100000000 * overview.btc_usd, 2), "right"),
-    td('USD')
+    td(std((overview.balance / overview.funded) / 100000000 * overview.btc_usd), "right"),
+    td('$ USD')
   ]))
 
   var groups = _.groupBy(rows, function (row) { return row.mobile })
@@ -167,7 +172,7 @@ var overviewHandler = function (rows, overview) {
     buf = buf + "</tr>"
     table.append(buf)
   })
-  table.append(tr([td(), td(b(st(sumOfDesktop)), 'right'), td(numeral(sumOfDesktop / sumOfAll).format('0.0%'), 'right'), td()]))
+  table.append(tr([td(), td(b(st(sumOfDesktop)), 'right'), td(b(numeral(sumOfDesktop / sumOfAll).format('0.0%')), 'right'), td()]))
 
   var sumOfMobile = _.reduce(mobile, function (memo, row) { return memo + row.count }, 0)
   table = $("#overview-first-run-table-mobile tbody")
@@ -181,7 +186,7 @@ var overviewHandler = function (rows, overview) {
     buf = buf + "</tr>"
     table.append(buf)
   })
-  table.append(tr([td(), td(b(st(sumOfMobile)), 'right'), td(numeral(sumOfMobile / sumOfAll).format('0.0%'), 'right'), td()]))
+    table.append(tr([td(), td(b(st(sumOfMobile)), 'right'), td(b(numeral(sumOfMobile / sumOfAll).format('0.0%')), 'right'), td()]))
   table.append(tr([td(), td(b(st(sumOfAll)), 'right'), td(), td()]))
 }
 
