@@ -83,3 +83,28 @@ export function round (v, n) {
   var mult = Math.pow(10, n)
   return parseInt(v * mult) / mult
 }
+
+/*
+  Build a response handler using a default set of success and param generators
+
+  client - Postgres client connection
+  query  - SQL to execute
+  successHandler - function(reply, results, request) -> Null
+  function to handle sending results to the reply function
+  paramsBuilder - function(request) -> Array
+  function to build a set of SQL params for query
+*/
+export function buildQueryReponseHandler (client, query, successHandler, paramsBuilder) {
+  paramsBuilder = paramsBuilder || ((request) => { return [] })
+  successHandler = successHandler || ((reply, results) => { reply(results.rows) })
+  return (request, reply) => {
+    const params = paramsBuilder(request)
+    client.query(query, params, (err, results) => {
+      if (err) {
+        reply(err.toString()).code(500)
+      } else {
+        successHandler(reply, results, request)
+      }
+    })
+  }
+}
