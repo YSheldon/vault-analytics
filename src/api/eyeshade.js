@@ -69,6 +69,31 @@ FROM
   FROM dw.fc_wallets_mv ) OVERVIEW
 `
 
+/*
+  Build a response handler using a default set of success and param generators
+
+  client - Postgres client connection
+  query  - SQL to execute
+  successHandler - function(reply, results, request) -> Null
+  function to handle sending results to the reply function
+  paramsBuilder - function(request) -> Array
+  function to build a set of SQL params for query
+*/
+const buildQueryReponseHandler = (client, query, successHandler, paramsBuilder) => {
+  paramsBuilder = paramsBuilder || ((request) => { return [] })
+  successHandler = successHandler || ((reply, results) => { reply(results.rows) })
+  return (request, reply) => {
+    const params = paramsBuilder(request)
+    client.query(query, params, (err, results) => {
+      if (err) {
+        reply(err.toString()).code(500)
+      } else {
+        successHandler(reply, results, request)
+      }
+    })
+  }
+}
+
 // Data endpoints
 exports.setup = (server, client, mongo) => {
 
@@ -76,19 +101,16 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/eyeshade_wallets',
-    handler: function (request, reply) {
-      let days = parseInt(request.query.days || 7, 10)
-      days += ' days'
-      client.query(EYESHADE_WALLETS, [days], (err, results) => {
-        if (err) {
-          reply(err.toString()).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          reply(results.rows)
-        }
-      })
-    }
+    handler: buildQueryReponseHandler(
+      client,
+      EYESHADE_WALLETS,
+      (reply, results, request) => {
+        results.rows.forEach((row) => common.formatPGRow(row))
+        results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+        reply(results.rows)
+      },
+      (request) => { return [parseInt(request.query.days || 7) + ' days'] }
+    )
   })
 
   // Eyeshade / ledger funded wallets by day
@@ -171,20 +193,13 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/ledger_overview',
-    handler: function (request, reply) {
-      client.query(EYESHADE_WALLETS_TOTAL, [], (err, results) => {
-        if (err) {
-          reply(err.toString()).code(500)
-        } else {
-          var summary = {
-            wallets: parseInt(results.rows[0].wallets),
-            balance: parseInt(results.rows[0].balance),
-            funded: parseInt(results.rows[0].funded),
-            btc_usd: parseFloat(results.rows[0].btc_usd)
-          }
-          reply(summary)
-        }
+    handler: buildQueryReponseHandler(client, EYESHADE_WALLETS_TOTAL, (reply, results) => {
+      reply({
+        wallets: parseInt(results.rows[0].wallets),
+        balance: parseInt(results.rows[0].balance),
+        funded: parseInt(results.rows[0].funded),
+        btc_usd: parseFloat(results.rows[0].btc_usd)
       })
-    }
+    })
   })
 }
