@@ -22,6 +22,12 @@ exports.channelPostgresArray = (channelFilter) => {
 
 exports.platformPostgresArray = (platformFilter) => {
   let platforms = _.filter((platformFilter || '').split(','), (platform) => platform !== '')
+
+  // handle legacy unknown = linux equality
+  if (platforms.indexOf('linux') > -1) {
+    platforms.push('unknown')
+  }
+
   if (!platforms.length) {
     return allPlatforms
   } else {
@@ -44,6 +50,9 @@ exports.formatPGRow = (row) => {
   }
   if (row.ts) {
     row.ago = moment(row.ts).add(moment().utcOffset(), 'minutes').fromNow()
+  }
+  if (row.platform === 'unknown') {
+    row.platform = 'linux'
   }
   return row
 }

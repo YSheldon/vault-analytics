@@ -41,6 +41,11 @@ var platforms = {
     label: 'Windows ia32',
     mobile: false
   },
+  linux: {
+    id: 'linux',
+    label: 'Linux',
+    mobile: false
+  },
   android: {
     id: 'android',
     label: 'Android',
@@ -105,6 +110,11 @@ var st = function (num) {
 // standard dollar number format i.e. 123,456.78
 var std = function (num) {
   return numeral(num).format('0,0.00')
+}
+
+// standard percentage form i.e. 45.3%
+var stp = function (num) {
+  return numeral(num).format('0.0%')
 }
 
 var b = function(text) { return '<strong>' + text + "</strong>" }
@@ -307,7 +317,7 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
   opts = opts || {}
 
   var count_link_func = function(row, count) {
-    return count
+    return st(count)
   }
 
   return function(rows) {
@@ -331,7 +341,7 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
       buf = buf + '<td>' + (row[y] || 'All') + '</td>'
       buf = buf + '<td class="text-right">' + count_link_func(row, row.count) + '</td>'
       if (row.daily_percentage !== undefined) {
-        buf = buf + '<td class="text-right">' + row.daily_percentage + '%</td>'
+        buf = buf + '<td class="text-right">' + stp(row.daily_percentage / 100) + '</td>'
       }
       buf = buf + '</tr>'
       table.append(buf)
@@ -708,6 +718,7 @@ var pageState = {
     osx: false,
     winx64: false,
     winia32: false,
+    linux: false,
     ios: false,
     android: false
   },
@@ -725,6 +736,7 @@ var viewState = {
     osx: true,
     winx64: true,
     winia32: true,
+    linux: true,
     ios: true,
     android: true
   }
@@ -735,6 +747,7 @@ var enableAllPlatforms = function () {
     osx: true,
     winx64: true,
     winia32: true,
+    linux: true,
     ios: true,
     android: true
   }
@@ -745,6 +758,7 @@ var disableAllPlatforms = function () {
     osx: false,
     winx64: false,
     winia32: false,
+    linux: false,
     ios: false,
     android: false
   }
@@ -754,6 +768,7 @@ var enableDesktopPlatforms = function () {
   viewState.platformEnabled.osx = true
   viewState.platformEnabled.winia32 = true
   viewState.platformEnabled.winx64 = true
+  viewState.platformEnabled.linux = true
 }
 
 var disableDesktopPlatforms = function () {
