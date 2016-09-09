@@ -14,3 +14,53 @@ tap.ok(apiCommon.channelPostgresArray('dev,stable').length === 2, 'channel filte
 tap.ok(apiCommon.platformPostgresArray('').length === apiCommon.allPlatforms.length, 'platform filter works with empty filter')
 
 tap.ok(apiCommon.platformPostgresArray('osx,ios').length === 2, 'platform filter works with filter')
+
+// buildQueryReponseHandler test
+
+// Postgres client connection mock
+var mockClient = {
+  query: function (sql, params, cb) {
+    tap.equal(params.length, 1, 'one parameter provider')
+    tap.equal(params[0], 1000, 'correct parameter')
+    tap.equal(sql, 'SELECT', 'correct sql passed')
+    cb(null, {
+      rows: [
+        { a: 1, b: 2 },
+        { a: 3, b: 4 }
+      ]
+    })
+  }
+}
+
+// HTTP request mock
+var mockRequest = {
+  params: {
+    age: 1000
+  }
+}
+
+// HTTP reply mock
+var mockReply = function (contents) {
+  tap.equal(contents.length, 2, '2 rows passed')
+  tap.equal(contents[0].a, 2, 'transferred results correct a')
+  tap.equal(contents[1].b, 2, 'transferred results correct b')
+}
+
+var requestHandler = apiCommon.buildQueryReponseHandler(
+  mockClient,
+  'SELECT',
+  function (reply, results, request) {
+    results.rows = results.rows.map(function (row) {
+      return {
+        a: row.a * 2,
+        b: row.b / 2
+      }
+    })
+    reply(results.rows)
+  },
+  function (request) {
+    return [request.params.age]
+  }
+)
+
+requestHandler(mockRequest, mockReply)
