@@ -16,11 +16,12 @@ FROM dtl.crashes CR where id in ( select object_id from (
   SELECT
   object_id,
   object_type,
-  ts_rank(searchable, plainto_tsquery($1)) AS rank
+  ts_rank(searchable, tsquery($1::text)) AS rank
 FROM dtl.fti
-WHERE searchable @@ plainto_tsquery($1)
+  WHERE searchable @@ tsquery($1::text)
 ORDER BY rank DESC
 ) S ) order by contents->'year_month_day' DESC
+LIMIT 100
 `
 
 // Data endpoints
