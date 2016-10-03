@@ -316,8 +316,14 @@ var statsHandler = function(rows) {
 var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
   opts = opts || {}
 
-  var count_link_func = function(row, count) {
-    return st(count)
+  var value_func = function(row, value) {
+    var formatter = st
+    if (opts.percentage) {
+      formatter = stp
+    } else if (opts.currency) {
+      formatter = std
+    }
+    return formatter(value)
   }
 
   return function(rows) {
@@ -339,7 +345,7 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
       var buf = '<tr class="' + ctrlClass + '">'
       buf = buf + '<td>' + row[x] + '</td>'
       buf = buf + '<td>' + (row[y] || 'All') + '</td>'
-      buf = buf + '<td class="text-right">' + count_link_func(row, row.count) + '</td>'
+      buf = buf + '<td class="text-right">' + value_func(row, row.count) + '</td>'
       if (row.daily_percentage !== undefined) {
         buf = buf + '<td class="text-right">' + stp(row.daily_percentage / 100) + '</td>'
       }
@@ -415,8 +421,10 @@ var usageVersionHandler = buildSuccessHandler('ymd', 'version', 'Date', 'Version
 var usageCrashesHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform')
 
 var walletsTotalHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: true })
+var walletsCurrencyHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: true, currency: true })
 
-var walletsHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: false })
+var walletsHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: false, percentage: true })
+var walletsBalanceAverageHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: false, currency: true })
 
 // Array of content panels
 var contents = [
@@ -585,13 +593,13 @@ var eyeshadeFundedPercentageRetriever = function() {
 
 var eyeshadeFundedBalanceRetriever = function() {
   $.ajax('/api/1/eyeshade_funded_balance_wallets?' + standardParams(), {
-    success: walletsTotalHandler
+    success: walletsCurrencyHandler
   })
 }
 
 var eyeshadeFundedBalanceAverageRetriever = function() {
   $.ajax('/api/1/eyeshade_funded_balance_average_wallets?' + standardParams(), {
-    success: walletsHandler
+    success: walletsBalanceAverageHandler
   })
 }
 
@@ -698,13 +706,13 @@ var menuItems = {
   "mnFundedBalanceEyeshade": {
     show: "usageContent",
     title: "Daily Ledger Funded Wallets Balance",
-    subtitle: "Total balance of funded wallets per day in BTC",
+    subtitle: "Total balance of funded wallets per day in USD ($)",
     retriever: eyeshadeFundedBalanceRetriever
   },
   "mnFundedBalanceAverageEyeshade": {
     show: "usageContent",
     title: "Daily Ledger Funded Wallets Average Balance",
-    subtitle: "Average balance of funded wallets per day in BTC",
+    subtitle: "Average balance of funded wallets per day in USD ($)",
     retriever: eyeshadeFundedBalanceAverageRetriever
   },
 }

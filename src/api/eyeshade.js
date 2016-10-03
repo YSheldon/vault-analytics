@@ -27,7 +27,7 @@ ORDER BY FC.created DESC
 const EYESHADE_FUNDED_WALLETS_PERCENTAGE = `
 SELECT
   TO_CHAR(FC.created, 'YYYY-MM-DD') AS ymd,
-  ROUND(((FC.funded + 0.0) / GREATEST(FC.wallets + 0.0, 1.0)) * 100, 1) AS count
+  (FC.funded + 0.0) / GREATEST(FC.wallets + 0.0, 1.0) AS count
 FROM dw.fc_wallets_mv FC
 WHERE
   FC.created >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-09-01'::date)
@@ -37,7 +37,7 @@ ORDER BY FC.created DESC
 const EYESHADE_FUNDED_WALLETS_BALANCE = `
 SELECT
   TO_CHAR(FC.created, 'YYYY-MM-DD') AS ymd,
-  ROUND(FC.balance / 100000000.0, 3) AS count
+  (FC.balance / 100000000.0) * ( SELECT quote FROM dw.btc_quotes WHERE currency_code = 'USD' ) AS count
 FROM dw.fc_wallets_mv FC
 WHERE
   FC.created >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date)
@@ -47,7 +47,7 @@ ORDER BY FC.created DESC
 const EYESHADE_FUNDED_WALLETS_BALANCE_AVERAGE = `
 SELECT
   TO_CHAR(FC.created, 'YYYY-MM-DD') AS ymd,
-  ROUND(FC.balance / GREATEST(FC.funded, 1.0) / 100000000.0, 3) AS count
+  (FC.balance / GREATEST(FC.funded, 1.0) / 100000000.0) * ( SELECT quote FROM dw.btc_quotes WHERE currency_code = 'USD' ) as count
 FROM dw.fc_wallets_mv FC
 WHERE
   FC.created >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-09-01'::date)
