@@ -98,6 +98,7 @@ SELECT
   contents->>'_version'                                                      AS version,
   contents->>'platform'                                                      AS platform,
   COALESCE(contents->'metadata'->>'cpu', 'Unknown')                          AS cpu,
+  COALESCE(contents->>'node_env', 'Unknown')                                 AS node_env,
   COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')                 AS crash_reason,
   COALESCE(contents->'metadata'->>'signature', 'Unknown')                    AS signature,
   COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown')        AS operating_system_name,

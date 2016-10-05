@@ -529,7 +529,11 @@ var recentCrashesRetriever = function() {
       var table = $('#recent-crash-list-table tbody')
       table.empty()
       _.each(crashes, function(crash) {
-        var buf = '<tr>'
+        var rowClass = ""
+        if (crash.node_env == 'development') {
+          rowClass = 'warning'
+        }
+        var buf = '<tr class="' + rowClass + '">'
         buf = buf + '<td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td>'
         buf = buf + '<td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td>'
         buf = buf + '<td>' + crash.version + '<br/><span class="ago">' + crash.electron_version + '</span></td>'
@@ -1150,7 +1154,6 @@ var searchInputHandler = function (e) {
   $.ajax('/api/1/search?query=' + encodeURIComponent(q), {
     success: function (results) {
       table.empty()
-      console.log(results)
       if (results.rowCount === 0) {
         $("#searchComments").hide()
       } else {
@@ -1163,6 +1166,10 @@ var searchInputHandler = function (e) {
       }
       var crashes = results.crashes
       _.each(crashes, function (crash, idx) {
+        var rowClass = ""
+        if (crash.contents.node_env == 'development') {
+          rowClass = 'warning'
+        }
         table.append(tr([
           td(idx + 1),
           td('<a href="#crash/' + crash.id + '">' + crash.id + '</a>'),
@@ -1172,9 +1179,9 @@ var searchInputHandler = function (e) {
           td(crash.contents.platform + ' ' + crash.contents.metadata.cpu),
           td(crash.contents.metadata.operating_system_name),
           td(_.map(crash.tags, function (tag) { return '<span class="label label-info">' + tag + '</span>'}).join(' '))
-          ]
+        ], { "classes": rowClass }
         ))
-        table.append(tr([td(), '<td colspan="7">' + crash.contents.metadata.signature + '</td>']))
+        table.append(tr([td(), '<td colspan="7">' + crash.contents.metadata.signature + '</td>'], { "classes": rowClass }))
       })
     }
   })
