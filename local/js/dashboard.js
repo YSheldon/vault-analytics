@@ -434,6 +434,7 @@ var contents = [
   "statsContent",
   "topCrashContent",
   "recentCrashContent",
+  "developmentCrashContent",
   "crashRatioContent",
   "searchContent"
 ]
@@ -533,6 +534,28 @@ var recentCrashesRetriever = function() {
         if (crash.node_env == 'development') {
           rowClass = 'warning'
         }
+        var buf = '<tr class="' + rowClass + '">'
+        buf = buf + '<td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td>'
+        buf = buf + '<td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td>'
+        buf = buf + '<td>' + crash.version + '<br/><span class="ago">' + crash.electron_version + '</span></td>'
+        buf = buf + '<td>' + crash.canonical_platform + '</td>'
+        buf = buf + '<td>' + crash.platform + ' ' + crash.cpu + '<br/><span class="ago">' + crash.operating_system_name + '</span></td>'
+        buf = buf + '<td>' + crash.crash_reason + '<br/>' + crash.signature + '</td>'
+        buf = buf + '</tr>'
+        table.append(buf)
+      })
+    }
+  })
+}
+
+var developmentCrashesRetriever = function() {
+  $.ajax('/api/1/development_crash_report_details?' + standardParams(), {
+    success: function(crashes) {
+      $("#contentTitle").html("Development Crash Reports")
+      var table = $('#development-crash-list-table tbody')
+      table.empty()
+      _.each(crashes, function(crash) {
+        var rowClass = ""
         var buf = '<tr class="' + rowClass + '">'
         buf = buf + '<td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td>'
         buf = buf + '<td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td>'
@@ -673,6 +696,12 @@ var menuItems = {
     title: "Recent Crashes",
     show: "recentCrashContent",
     retriever: recentCrashesRetriever
+  },
+  "mnDevelopmentCrashes": {
+    title: "Development Crashes",
+    show: "developmentCrashContent",
+    subtitle: "Most recent development crashes",
+    retriever: developmentCrashesRetriever
   },
   "mnCrashes": {
     title: "Daily Crashes by Platform",
@@ -938,6 +967,12 @@ router.get('crash_ratio', function (req) {
 
   $('#crash-ratio-table').show()
   $('#crash-ratio-detail-table').hide()
+})
+
+router.get('development_crashes', function(req) {
+  pageState.currentlySelected = 'mnDevelopmentCrashes'
+  updatePageUIState()
+  refreshData()
 })
 
 router.get('recent_crashes', function(req) {

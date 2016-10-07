@@ -111,6 +111,29 @@ ORDER BY ts DESC
 LIMIT 100
 `
 
+const DEVELOPMENT_CRASH_REPORT_DETAILS = `
+SELECT
+  id,
+  ts,
+  contents->>'year_month_day'                                                AS ymd,
+  COALESCE(contents->>'ver', '0.0.0')                                        AS electron_version,
+  contents->>'_version'                                                      AS version,
+  contents->>'platform'                                                      AS platform,
+  COALESCE(contents->'metadata'->>'cpu', 'Unknown')                          AS cpu,
+  COALESCE(contents->>'node_env', 'Unknown')                                 AS node_env,
+  COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')                 AS crash_reason,
+  COALESCE(contents->'metadata'->>'signature', 'Unknown')                    AS signature,
+  COALESCE(contents->'metadata'->>'operating_system_name', 'Unknown')        AS operating_system_name,
+  sp.canonical_platform(contents->>'platform', contents->'metadata'->>'cpu') AS canonical_platform
+FROM dtl.crashes
+WHERE
+  sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL) AND
+  sp.canonical_platform(contents->>'platform', contents->'metadata'->>'cpu') = ANY ($2) AND
+  COALESCE(contents->>'node_env', 'Unknown') = 'development'
+ORDER BY ts DESC
+LIMIT 200
+`
+
 const CRASH_REPORT_DETAILS = `
 SELECT
   id,
@@ -317,6 +340,29 @@ exports.setup = (server, client, mongo) => {
         }
       })
     }
+  })
+
+  // Default crash success handler
+  const commonSuccessHandler = (reply, results, request) => {
+    results.rows.forEach((row) => common.formatPGRow(row))
+    reply(results.rows)
+  }
+
+  // Return an array containing a day offset i.e. ['3 days'] and a set of platforms
+  const commonDaysPlatformParamsBuilder = (request) => {
+    return [parseInt(request.query.days || 7) + ' days',
+            common.platformPostgresArray(request.query.platformFilter)]
+  }
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/development_crash_report_details',
+    handler: common.buildQueryReponseHandler(
+      client,
+      DEVELOPMENT_CRASH_REPORT_DETAILS,
+      commonSuccessHandler,
+      commonDaysPlatformParamsBuilder
+    )
   })
 
   server.route({
