@@ -43,6 +43,26 @@ FROM
 ORDER BY USG.ymd DESC
 `
 
+const AVERAGE_MONTHLY_DAU = `
+SELECT ymd, SUM(average_dau) AS count
+FROM dw.fc_average_monthly_usage_mv
+WHERE
+  platform = ANY ($1) AND
+  channel = ANY ($2)
+GROUP BY ymd
+ORDER BY ymd DESC
+`
+
+const AVERAGE_MONTHLY_FIRST_DAU = `
+SELECT ymd, SUM(average_first_time) AS count
+FROM dw.fc_average_monthly_usage_mv
+WHERE
+  platform = ANY ($1) AND
+  channel = ANY ($2)
+GROUP BY ymd
+ORDER BY ymd DESC
+`
+
 const DAU = `
 SELECT TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd, SUM(total) AS count
 FROM dw.fc_usage
@@ -232,6 +252,45 @@ exports.setup = (server, client, mongo) => {
       let platforms = common.platformPostgresArray(request.query.platformFilter)
       let channels = common.channelPostgresArray(request.query.channelFilter)
       client.query(DAU, [days, platforms, channels], (err, results) => {
+        if (err) {
+          reply(err.toString()).status(500)
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
+          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Monthly average daily active users
+  server.route({
+    method: 'GET',
+    path: '/api/1/dau_monthly_average',
+    handler: function (request, reply) {
+      let platforms = common.platformPostgresArray(request.query.platformFilter)
+      let channels = common.channelPostgresArray(request.query.channelFilter)
+      client.query(AVERAGE_MONTHLY_DAU, [platforms, channels], (err, results) => {
+        console.log(err)
+        if (err) {
+          reply(err.toString())
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
+          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Monthly average daily first time users
+  server.route({
+    method: 'GET',
+    path: '/api/1/dau_first_monthly_average',
+    handler: function (request, reply) {
+      let platforms = common.platformPostgresArray(request.query.platformFilter)
+      let channels = common.channelPostgresArray(request.query.channelFilter)
+      client.query(AVERAGE_MONTHLY_FIRST_DAU, [platforms, channels], (err, results) => {
         if (err) {
           reply(err.toString()).status(500)
         } else {
