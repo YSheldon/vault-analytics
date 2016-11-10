@@ -8,6 +8,9 @@ var mvs = {
     "dw.fc_crashes_mv",
     "dw.fc_crashes_dau_mv",
     "dw.fc_crashes_process_type_mv"
+  ],
+  stats: [  
+    "dw.fc_average_monthly_usage_mv"
   ]
 }
 
