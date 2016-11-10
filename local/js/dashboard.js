@@ -493,6 +493,18 @@ var MAUAggPlatformRetriever = function() {
   })
 }
 
+var MAUAverageAggPlatformRetriever = function() {
+  $.ajax('/api/1/dau_monthly_average?' + standardParams(), {
+    success: usagePlatformHandler
+  })
+}
+
+var MAUAverageNewAggPlatformRetriever = function() {
+  $.ajax('/api/1/dau_first_monthly_average?' + standardParams(), {
+    success: usagePlatformHandler
+  })
+}
+
 var DNUPlatformRetriever = function() {
   $.ajax('/api/1/dau_platform_first?' + standardParams(), {
     success: usagePlatformHandler
@@ -666,6 +678,16 @@ var menuItems = {
     show: "usageContent",
     title: "Monthly Active Users (MAU)",
     retriever: MAUAggPlatformRetriever
+  },
+  "mnUsageMonthAverageAgg": {
+    show: "usageContent",
+    title: "Monthly Average Daily Active Users (MAU/DAU)",
+    retriever: MAUAverageAggPlatformRetriever
+  },
+  "mnUsageMonthAverageNewAgg": {
+    show: "usageContent",
+    title: "Monthly Average Daily New Users (MAU/DNU)",
+    retriever: MAUAverageNewAggPlatformRetriever
   },
   "mnDailyNew": {
     show: "usageContent",
@@ -921,6 +943,20 @@ router.get('usage_month', function(req) {
 
 router.get('usage_month_agg', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAgg'
+  viewState.showControls = true
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('usage_month_average_agg', function(req) {
+  pageState.currentlySelected = 'mnUsageMonthAverageAgg'
+  viewState.showControls = true
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('usage_month_average_new_agg', function(req) {
+  pageState.currentlySelected = 'mnUsageMonthAverageNewAgg'
   viewState.showControls = true
   updatePageUIState()
   refreshData()
