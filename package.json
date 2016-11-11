@@ -1,6 +1,6 @@
 {
   "name": "vault-analytics",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Vault analytics UI and data processors",
   "main": "index.js",
   "scripts": {
@@ -38,6 +38,7 @@
     "minidump": "brave/node-minidump",
     "moment": "^2.11.1",
     "mongodb": "^2.1.4",
+    "node-slack": "0.0.7",
     "pg": "4.4.4",
     "request": "^2.76.0",
     "underscore": "^1.8.3",

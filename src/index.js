@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+let path = require('path')
 let _ = require('underscore')
 
 let Hapi = require('hapi')
@@ -25,6 +26,10 @@ let config = require('../config/config.' + profile + '.js')
 
 let pgc = require('./pgc')
 let mgc = require('./mongoc')
+
+let slack = require('./slack')
+let npminfo = require(path.join(__dirname, '..', 'package'))
+config.npminfo = _.pick(npminfo, 'name', 'version', 'description', 'author', 'license', 'bugs', 'homepage')
 
 // This is fired after all resources connected
 let kickoff = (err, connections) => {
@@ -52,10 +57,12 @@ let kickoff = (err, connections) => {
 
   // Setup the UI for the dashboard
   ui.setup(server)
+  slack.setup(server, config)
 
   server.start((err) => {
     assert(!err, `error starting service ${err}`)
     console.log('Analytics service started')
+    slack.notify( { text: require('os').hostname() + ' ' + npminfo.name + '@' + npminfo.version + ' started' } )
   })
 }
 
