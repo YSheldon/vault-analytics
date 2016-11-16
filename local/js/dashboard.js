@@ -1248,6 +1248,17 @@ $("#btn-show-today").on('change', function() {
   refreshData()
 })
 
+var linksSearchInputHandler = function (e) {
+  var q = this.value
+  $(".sidebar li a").each(function (idx, elem) {
+    if (elem.text.toLowerCase().match(new RegExp(q))) {
+      $(elem).closest('li').show('fast')
+    } else {
+      $(elem).closest('li').hide('fast')
+    }
+  })
+}
+
 var searchInputHandler = function (e) {
   var q = this.value
   console.log(q)
@@ -1295,5 +1306,7 @@ var searchInputHandler = function (e) {
 }
 
 $("#searchText").on('input', _.debounce(searchInputHandler, 500))
+
+$("#searchLinks").on('input', _.debounce(linksSearchInputHandler, 250))
 
 $("#searchComments").hide()
