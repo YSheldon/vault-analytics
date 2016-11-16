@@ -51,6 +51,11 @@ var platforms = {
     label: 'Android',
     mobile: true
   },
+  androidbrowser: {
+    id: 'androidbrowser',
+    label: 'Android Browser',
+    mobile: true
+  },
   ios: {
     id: 'ios',
     label: 'iOS',
@@ -805,7 +810,8 @@ var pageState = {
     winia32: false,
     linux: false,
     ios: false,
-    android: false
+    android: false,
+    androidbrowser: false
   },
   channelFilter: {
     dev: true,
@@ -823,7 +829,8 @@ var viewState = {
     winia32: true,
     linux: true,
     ios: true,
-    android: true
+    android: true,
+    androidbrowser: true
   }
 }
 
@@ -834,7 +841,8 @@ var enableAllPlatforms = function () {
     winia32: true,
     linux: true,
     ios: true,
-    android: true
+    android: true,
+    androidbrowser: true
   }
 }
 
@@ -845,7 +853,8 @@ var disableAllPlatforms = function () {
     winia32: false,
     linux: false,
     ios: false,
-    android: false
+    android: false,
+    androidbrowser: false
   }
 }
 
@@ -865,11 +874,13 @@ var disableDesktopPlatforms = function () {
 var enableMobilePlatforms = function () {
   viewState.platformEnabled.ios = true
   viewState.platformEnabled.android = true
+  viewState.platformEnabled.androidbrowser = true
 }
 
 var disableMobilePlatforms = function () {
   viewState.platformEnabled.ios = false
   viewState.platformEnabled.android = false
+  viewState.platformEnabled.androidbrowser = false
 }
 
 $("#daysSelector").on('change', function (evt, value) {
