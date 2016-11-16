@@ -1,8 +1,13 @@
 <div class="col-sm-3 col-md-2 sidebar">
   <ul class="nav nav-sidebar">
-    <div style="padding: 8px;">
-      <input type="search" class="form-control" id="searchLinks" placeholder="Filter...">
+
+    <div class="input-group" style="padding: 8px;">
+      <input type="text" class="form-control" id="searchLinks" placeholder="Filter...">
+      <span class="input-group-btn">
+        <button class="btn btn-default" type="button" id="clearSearchLinks"><i class="fa fa-times" aria-hidden="true"></i></button>
+      </span>
     </div>
+
     <li><a href="#overview" id="mnOverview">Overview <span class="sr-only">(current)</span></a></li>
 
     <li><a href="#usage_month_agg" id="mnUsageMonthAgg">Monthly Active Users (MAU)</a></li>

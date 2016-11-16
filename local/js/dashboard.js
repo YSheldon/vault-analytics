@@ -1260,14 +1260,24 @@ $("#btn-show-today").on('change', function() {
 })
 
 var linksSearchInputHandler = function (e) {
-  var q = this.value
-  $(".sidebar li a").each(function (idx, elem) {
-    if (elem.text.toLowerCase().match(new RegExp(q))) {
+  filterLinksOn(this.value)
+}
+
+var filterLinksOn = function (text) {
+  text = (text || '').toLowerCase()
+  if (text) {
+    $(".sidebar li a").each(function (idx, elem) {
+      if (elem.text.toLowerCase().match(new RegExp(text))) {
+        $(elem).closest('li').show('fast')
+      } else {
+        $(elem).closest('li').hide('fast')
+      }
+    })
+  } else {
+    $(".sidebar li a").each(function (idx, elem) {
       $(elem).closest('li').show('fast')
-    } else {
-      $(elem).closest('li').hide('fast')
-    }
-  })
+    })
+  }
 }
 
 var searchInputHandler = function (e) {
@@ -1320,4 +1330,11 @@ $("#searchText").on('input', _.debounce(searchInputHandler, 500))
 
 $("#searchLinks").on('input', _.debounce(linksSearchInputHandler, 250))
 
+$("#clearSearchLinks").on('click', function () {
+  $("#searchLinks").val('')
+  filterLinksOn(null)
+  $("#searchLinks").focus()
+})
+
 $("#searchComments").hide()
+$("#searchLinks").focus()
