@@ -43,6 +43,16 @@ FROM
 ORDER BY USG.ymd DESC
 `
 
+const AVERAGE_MONTHLY_STATS_PLATFORM = `
+SELECT ymd, platform, SUM(average_dau) AS dau, SUM(mau) as MAU, SUM(average_first_time) AS first_time
+FROM dw.fc_average_monthly_usage_mv
+WHERE
+  platform = ANY ($1) AND
+  channel = ANY ($2)
+GROUP BY ymd, platform
+ORDER BY platform, ymd ASC
+`
+
 const AVERAGE_MONTHLY_DAU = `
 SELECT ymd, SUM(average_dau) AS count
 FROM dw.fc_average_monthly_usage_mv
@@ -279,6 +289,31 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Monthly average daily stats by platform
+  server.route({
+    method: 'GET',
+    path: '/api/1/monthly_average_stats_platform',
+    handler: function (request, reply) {
+      let platforms = common.platformPostgresArray(request.query.platformFilter)
+      let channels = common.channelPostgresArray(request.query.channelFilter)
+      client.query(AVERAGE_MONTHLY_STATS_PLATFORM, [platforms, channels], (err, results) => {
+        if (err) {
+          reply(err.toString())
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
+          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
+          results.rows.forEach((row) => {
+            row.dau = parseInt(row.dau)
+            row.mau = parseInt(row.mau)
+            row.first_time = parseInt(row.first_time)
+          })
           reply(results.rows)
         }
       })

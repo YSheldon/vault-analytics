@@ -84,6 +84,12 @@ var channelKeys = _.keys(channels)
 
 var reversePlatforms = _.object(_.map(platforms, function(platform) { return [platform.label, platform] }))
 
+var safeDivide = function (n, d, def) {
+  def = def || 0
+  if (!d || d === 0) return def
+  return n / d
+}
+
 var round = function (x, n) {
   n = n || 0
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
@@ -94,6 +100,13 @@ var td = function (contents, align, opts) {
   align = align || 'left'
   opts = opts || {}
   return '<td class="text-' + align + '">' + contents + '</td>'
+}
+
+var th = function (contents, align, opts) {
+  contents = contents || ''
+  align = align || 'left'
+  opts = opts || {}
+  return '<th class="text-' + align + '">' + contents + '</th>'
 }
 
 var tr = function (tds, opts) {
@@ -117,12 +130,80 @@ var std = function (num) {
   return numeral(num).format('0,0.00')
 }
 
+// standard number format i.e. 123,456.7
+var st1 = function (num) {
+  return numeral(num).format('0,0.0')
+}
+
 // standard percentage form i.e. 45.3%
 var stp = function (num) {
   return numeral(num).format('0.0%')
 }
 
 var b = function(text) { return '<strong>' + text + "</strong>" }
+
+var overviewMonthAveragesHandler = function (rows) {
+  var tblHead = $("#monthly-averages-table thead")
+  var tblBody = $("#monthly-averages-table tbody")
+
+  var months = _.uniq(_.pluck(rows, 'ymd')).map(function (ymd) { return ymd.substring(0, 7) })
+  var buf = "<tr><th></th>" + months.map(function (ymd) { return th(ymd, 'right') }).join('') + "</tr>"
+  tblHead.html(buf)
+
+  var platforms = _.uniq(_.pluck(rows, 'platform')).sort()
+  var platformStats = _.groupBy(rows, function (row) { return row.platform } )
+  var platformCrossTab = _.groupBy(rows, function (row) { return row.ymd.substring(0, 7) + '|' + row.platform })
+
+  var formatPlatformMonth = function (platformMonth, last) {
+    var b = ''
+    var diffs
+
+    var fdiff = function (diffs, k) {
+      var cls
+      if (diffs) {
+        cls = 'ltz'
+        if (diffs[k + '_per'] > 0) cls = 'gtz'
+        return ' <span class="' + cls + '">' + stp(diffs[k + '_per']) + '</span>'
+      } else {
+        return ''
+      }
+    }
+
+    if (last) {
+      diffs = {
+        mau_per: safeDivide(platformMonth.mau - last.mau, platformMonth.mau),
+        dau_per: safeDivide(platformMonth.dau - last.dau, platformMonth.dau),
+        first_time_per: safeDivide(platformMonth.first_time - last.first_time, platformMonth.first_time)
+      }
+    }
+    b = b + '<div>' + st(platformMonth.mau) + fdiff(diffs, 'mau') + '</div>'
+    b = b + '<div>' + st(platformMonth.dau) + fdiff(diffs, 'dau') + '</div>'
+    b = b + '<div>' + st(platformMonth.first_time) + fdiff(diffs, 'first_time') + '</div>'
+    b = b + '<div>' + std(safeDivide(platformMonth.dau, platformMonth.mau)) + '</div>'
+    b = b + '<div>' + st1(safeDivide(platformMonth.mau, platformMonth.first_time)) + '</div>'
+    return b
+  }
+
+  var buf = ''
+  platforms.forEach(function (platformName) {
+    var platformData = platformStats[platformName]
+    buf = buf + '<tr>'
+    buf = buf + td(b(platformName))
+    var last = null
+    months.forEach(function (month) {
+      var monthPlatformInfo = platformCrossTab[month + '|' + platformName]
+      if (monthPlatformInfo) {
+        monthPlatformInfo = monthPlatformInfo[0]
+        buf = buf + td(formatPlatformMonth(monthPlatformInfo, last), 'right')
+        last = monthPlatformInfo
+      } else {
+        buf = buf + td('')
+      }
+    })
+    buf = buf + '</tr>'
+  })
+  tblBody.html(buf)
+}
 
 var overviewHandler = function (rows, overview) {
 
@@ -618,6 +699,10 @@ var crashesVersionRetriever = function() {
 }
 
 var overviewRetriever = function () {
+  $.ajax('/api/1/monthly_average_stats_platform', {
+    success: overviewMonthAveragesHandler
+  })
+
   $.ajax('/api/1/dau_platform_first_summary', {
     success: function(rows) {
       $.ajax('/api/1/ledger_overview', {
@@ -1338,3 +1423,8 @@ $("#clearSearchLinks").on('click', function () {
 
 $("#searchComments").hide()
 $("#searchLinks").focus()
+
+$("#monthly-averages-whats-this").on('click', function (e) {
+  e.preventDefault()
+  $("#monthly-averages-instructions").show("slow")
+})

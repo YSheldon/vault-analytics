@@ -137,3 +137,13 @@ body {
     margin-bottom: 20px;
     margin-top: -10px;
 }
+
+.ltz {
+    font-size: 65%;
+    color: red;
+}
+
+.gtz {
+    font-size: 65%;
+    color: green;
+}
