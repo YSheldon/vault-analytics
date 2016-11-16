@@ -315,6 +315,7 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
           reply(results.rows)
         }
       })
@@ -353,6 +354,7 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
           reply(results.rows)
         }
       })
@@ -374,13 +376,14 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
           reply(results.rows)
         }
       })
     }
   })
 
-  // Daily active users by platform
+  // Daily active users by platform minus first time runs
   server.route({
     method: 'GET',
     path: '/api/1/dau_platform_minus_first',
@@ -395,6 +398,7 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
           reply(results.rows)
         }
       })
@@ -415,6 +419,7 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterThisMonth(results.rows, request.query.showToday === 'true')
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
           reply(results.rows)
         }
       })
@@ -455,6 +460,7 @@ exports.setup = (server, client, mongo) => {
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
           results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
           reply(results.rows)
         }
       })
@@ -473,6 +479,7 @@ exports.setup = (server, client, mongo) => {
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
           reply(results.rows)
         }
       })

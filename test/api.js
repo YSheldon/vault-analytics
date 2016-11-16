@@ -15,6 +15,18 @@ tap.ok(apiCommon.platformPostgresArray('').length === apiCommon.allPlatforms.len
 
 tap.ok(apiCommon.platformPostgresArray('osx,ios').length === 2, 'platform filter works with filter')
 
+var androidRow = {
+  platform: 'android'
+}
+apiCommon.convertPlatformLabels(androidRow)
+tap.ok(androidRow.platform === 'Link Bubble', 'Link Bubble platform label conversion')
+
+androidRow = {
+  platform: 'androidbrowser'
+}
+apiCommon.convertPlatformLabels(androidRow)
+tap.ok(androidRow.platform === 'Android Browser', 'Android Browser platform label conversion')
+
 // buildQueryReponseHandler test
 
 // Postgres client connection mock

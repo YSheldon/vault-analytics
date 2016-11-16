@@ -117,3 +117,9 @@ export function buildQueryReponseHandler (client, query, successHandler, paramsB
     })
   }
 }
+
+export function convertPlatformLabels (row) {
+  if (row.platform === 'android') row.platform = 'Link Bubble'
+  if (row.platform === 'androidbrowser') row.platform = 'Android Browser'
+  return row
+}
