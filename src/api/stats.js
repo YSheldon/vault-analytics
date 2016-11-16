@@ -205,12 +205,14 @@ FROM dw.fc_usage FC
 WHERE
   FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   first_time AND
-  ( sp.platform_mapping(FC.platform) <> 'ios' AND sp.platform_mapping(FC.platform) <> 'android' )
+  ( sp.platform_mapping(FC.platform) <> 'ios' AND sp.platform_mapping(FC.platform) <> 'android' AND sp.platform_mapping(FC.platform) <> 'androidbrowser' )
 GROUP BY sp.platform_mapping(FC.platform)
   UNION
 SELECT 'ios' AS platform, (SELECT SUM(downloads) FROM appannie.fc_inception_by_country) AS count
   UNION
 SELECT 'android' AS platform, (SELECT SUM(downloads) FROM appannie.fc_android_inception_by_country) AS count
+  UNION
+SELECT 'androidbrowser' AS platform, 0 AS count -- TODO fill this in with relevant data
 ) SM JOIN dw.dm_platform PL ON SM.platform = PL.platform
 ORDER BY PL.mobile, PL.vendor
 `
