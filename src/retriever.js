@@ -105,7 +105,7 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
   var query = db.collection('usage').aggregate([
     {
       $match: {
-        year_month_day: { $gt: '2016-07-01' }
+        year_month_day: { $gt: '2016-11-01' }
       }
     },
     {
