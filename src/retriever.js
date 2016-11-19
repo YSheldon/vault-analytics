@@ -1,3 +1,5 @@
+var moment = require('moment')
+
 var platforms = {
   darwin: 'osx',
   win32: 'winx64'
@@ -102,10 +104,13 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
   ts = ts || (new Date()).getTime()
   days = days || 7
 
+  var limit = moment().subtract(1, 'days').format('YYYY-MM-DD')
+  console.log(`Retrieving records on and after ${limit}`)
+
   var query = db.collection('usage').aggregate([
     {
       $match: {
-        year_month_day: { $gt: '2016-11-01' }
+        year_month_day: { $gte: limit }
       }
     },
     {
@@ -156,7 +161,7 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
         '_id.channel': 1
       }
     }
-  ])
+  ], { explain: false })
 
   query.toArray((err, result) => {
     if (err) {
