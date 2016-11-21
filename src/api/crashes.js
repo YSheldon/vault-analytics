@@ -66,7 +66,7 @@ GROUP BY
   version,
   platform
 HAVING SUM(total) > 50 ) CR
-ORDER BY crashes / total DESC
+ORDER BY sp.comparable_version(version) DESC, crashes / total DESC
 `
 
 const CRASH_REPORT_DETAILS_PLATFORM_VERSION = `
