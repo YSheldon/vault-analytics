@@ -173,6 +173,77 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
   })
 }
 
+
+exports.dailyActiveAndroidUsersFullGrouped = (db, exceptions, cb) => {
+  var limit = moment().subtract(14, 'days').format('YYYY-MM-DD')
+  console.log(`Retrieving records on and after ${limit}`)
+
+  var query = db.collection('android_usage').aggregate([
+    {
+      $match: {
+        year_month_day: { $gte: limit }
+      }
+    },
+    {
+      $match: { daily: true }
+    },
+    {
+      $project: {
+        date: {
+          $add: [ (new Date(0)), '$ts' ]
+        },
+        platform: {
+          $ifNull: [ '$platform', 'unknown' ]
+        },
+        version: {
+          $ifNull: [ '$version', '0.0.0' ]
+        },
+        first_time: {
+          $ifNull: [ '$first', false ]
+        },
+        channel: {
+          $ifNull: [ '$channel', 'dev' ]
+        },
+        ymd: {
+          $ifNull: [ '$year_month_day', '2016-02-10']
+        }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          ymd: '$ymd',
+          platform: '$platform',
+          version: '$version',
+          first_time: '$first_time',
+          channel: '$channel'
+        },
+        count: {
+          $sum: 1
+        }
+      }
+    },
+    {
+      $sort: {
+        '_id.ymd': -1,
+        '_id.platform': 1,
+        '_id.version': 1,
+        '_id.first_time': 1,
+        '_id.channel': 1
+      }
+    }
+  ], { explain: false })
+
+  query.toArray((err, result) => {
+    if (err) {
+      throw new Error(err)
+    } else {
+      result = result.concat(exceptions)
+    }
+    cb(err, result)
+  })
+}
+
 exports.dailyMonthlyUsers = (db, cb, ts, days) => {
   ts = ts || (new Date()).getTime()
   days = days || 7
