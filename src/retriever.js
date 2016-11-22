@@ -313,11 +313,18 @@ exports.dailyActiveiOSUsersFullGrouped = (db, exceptions, cb) => {
   })
 }
 
-exports.dailyMonthlyUsers = (db, cb, ts, days) => {
-  ts = ts || (new Date()).getTime()
-  days = days || 7
+/*
+ * Retrieve the new monthly active user for
+ * a range of days
+ *
+ * @param db {Object} - Mongo connection
+ * @param cb {function(Object, Array[Object]} - Callback
+ * @param collection {String} - Name of Mongo collection to inspect
+ */
+exports.monthlyUsersByDay = (db, cb, collection) => {
+  collection = collection || 'usage'
 
-  var query = db.collection('usage').aggregate([
+  var query = db.collection(collection).aggregate([
     {
       $match: { monthly: true }
     },

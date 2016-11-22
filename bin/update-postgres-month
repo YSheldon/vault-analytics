@@ -1,39 +1,74 @@
 #!/usr/bin/env node
-var db = require('../dist/mongoc')
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+var mongoc = require('../dist/mongoc')
+var pgc = require('../dist/pgc')
 var retriever = require('../dist/retriever')
 var model = require('../dist/model')
+var reporter = require('../dist/reporter')
 
 var async = require('async')
 var _ = require('underscore')
-var fs = require('fs')
-var pgc = require('../dist/pgc')
+var path = require('path')
 
-// Connect to postgres
-pgc.setup(function (err, client) {
-  if (err) {
-    throw new Error(err)
+var args = require('yargs')
+    .default('collection', 'usage')
+    .argv
+
+var validCollections = ['usage', 'android_usage']
+if (validCollections.indexOf(args.collection) === -1) {
+  console.log('Invalid collection ' + args.collection);
+  process.exit(1)
+}
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
+
+// This is triggered when all resources have valid connections
+var resourcesReady = function(asyncError, resources) {
+  var cleanup = function () {
+    // Close connections to Postgres and Mongo
+    resources.pg.end()
+    resources.mg.close()
   }
-  console.log('Update monthly totals for laptop')
-  console.log('Connected to postgres')
 
-  db.setup(function(err, connection) {
-    console.log('Connected to mongo')
-    // Retrieve the daily active user stats
-    retriever.dailyMonthlyUsers(connection, function(err, results) {
-      // Build funcs to execute
-      var funcs = _.map(results, function(row) {
-        return model.usageMonthlyUpserter(client, row)
+  console.log('Update monthly totals for ' + args.collection)
+  var resultsHandler = function(err, results) {
+    // disambiguate between Link Bubble and tabbed browser
+    if (args.collection === 'android_usage') {
+      results.forEach(function (result) {
+        result._id.platform = 'androidbrowser'
       })
+    }
 
-      // Insert rows
-      async.series(funcs, function(err, results) {
-        if (err) {
-          throw new Error(err)
-        }
-        console.log('Done')
-        client.end()
-        connection.close()
-      })
+    // filter out wrong version formats
+    results = results.filter(function (result) {
+      return result._id.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))
     })
-  })
-})
+
+    // Build funcs to execute
+    var funcs = _.map(results, function(row) {
+      return model.usageMonthlyUpserter(resources.pg, row)
+    })
+
+    // Insert rows
+    async.series(funcs, function(err, results) {
+      if (err) {
+        throw new Error(err)
+      }
+      // Report the results of the job run
+      reporter.shutdown(runInfo, resources.pg, cleanup)
+    })
+  }
+  // retrieve the monthly user count and update Postgres
+  retriever.monthlyUsersByDay(resources.mg, resultsHandler, args.collection)
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup,
+  mg: mongoc.setup
+}, resourcesReady)
