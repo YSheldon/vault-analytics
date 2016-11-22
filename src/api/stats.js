@@ -222,7 +222,7 @@ SELECT 'ios' AS platform, (SELECT SUM(downloads) FROM appannie.fc_inception_by_c
   UNION
 SELECT 'android' AS platform, (SELECT SUM(downloads) FROM appannie.fc_android_inception_by_country) AS count
   UNION
-SELECT 'androidbrowser' AS platform, 0 AS count -- TODO fill this in with relevant data
+  SELECT 'androidbrowser' AS platform, (SELECT SUM(total) FROM dw.fc_usage WHERE platform = 'androidbrowser' AND first_time) AS count
 ) SM JOIN dw.dm_platform PL ON SM.platform = PL.platform
 ORDER BY PL.mobile, PL.vendor
 `
