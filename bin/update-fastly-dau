@@ -13,6 +13,7 @@ var pgc = require('../dist/pgc')
 var fls = require('../dist/fastly-log-summarizer')
 var flp = require('../dist/fastly-log-parser')
 var reporter = require('../dist/reporter')
+var model = require('../dist/model')
 
 var jobName = path.basename(__filename)
 var runInfo = reporter.startup(jobName)
@@ -20,6 +21,7 @@ var runInfo = reporter.startup(jobName)
 // Argument parsing
 var args = require('yargs')
     .default('days_ago', 0)
+    .default('overwrite', false)
     .argv
 
 // default to X days ago
@@ -96,14 +98,8 @@ var resourcesReady = function(asyncError, resources) {
       throw new Error(s3err)
     }
 
-//    console.log(records.filter(function (record) {
-//      return record.monthly && record.platform === 'osx'
-//    }).length)
-
     // Select monthly records
     var monthlySummarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'countryCode', 'dmaCode'], { monthly: true })
-
-//    console.log(_.reduce(monthlySummarized, function (memo, record) { return memo + record.count }, 0))
 
     // Group the records by dimension list
     var summarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'first', 'countryCode', 'dmaCode'], { daily: true })
@@ -126,8 +122,24 @@ var resourcesReady = function(asyncError, resources) {
       if (err) {
         throw new Error(err)
       }
-      // Report the results of the job run
-      reporter.shutdown(runInfo, resources.pg, cleanup)
+      if (args.overwrite) {
+        overwrite(resources, ymd, function () {
+          reporter.shutdown(runInfo, resources.pg, cleanup)
+        })
+      } else {
+        reporter.shutdown(runInfo, resources.pg, cleanup)
+      }
+    })
+  })
+}
+
+function overwrite (resources, ymd, cb) {
+  console.log('Writing to dw.fc_usage and fc_usage_month from Fastly')
+  model.moveFastlyToUsageForDay(resources.pg, ymd, function (errorDay) {
+    console.log(errorDay)
+    model.moveFastlyMonthlyToUsageForDay(resources.pg, ymd, function (errorMonth) {
+      console.log(errorMonth)
+      cb()
     })
   })
 }

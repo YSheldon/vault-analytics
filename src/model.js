@@ -34,3 +34,28 @@ exports.exceptionsUpserter = function (client) {
   }
 }
 
+const MOVE_FASTLY_SQL = `
+INSERT INTO dw.fc_usage ( ymd, platform, version, channel, first_time, total )
+SELECT ymd, platform, version, channel, first_time, SUM(total) as ftotal
+FROM dw.fc_fastly_usage FC
+WHERE ymd = $1
+GROUP BY ymd, platform, version, channel, first_time
+ON CONFLICT (ymd, platform, version, first_time, channel) DO UPDATE SET total = EXCLUDED.total
+`
+
+export function moveFastlyToUsageForDay (pg, ymd, cb) {
+  pg.query(MOVE_FASTLY_SQL, [ymd], cb)
+}
+
+const MOVE_FASTLY_MONTH_SQL = `
+INSERT INTO dw.fc_usage_month ( ymd, platform, version, channel, total )
+SELECT ymd, platform, version, channel, SUM(total) as ftotal
+FROM dw.fc_fastly_calendar_month_usage FC
+WHERE ymd = $1
+GROUP BY ymd, platform, version, channel
+ON CONFLICT (ymd, platform, version, channel) DO UPDATE SET total = EXCLUDED.total
+`
+
+export function moveFastlyMonthlyToUsageForDay (pg, ymd, cb) {
+  pg.query(MOVE_FASTLY_MONTH_SQL, [ymd], cb)
+}
