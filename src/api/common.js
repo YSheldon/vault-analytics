@@ -5,7 +5,7 @@
 const _ = require('underscore')
 const moment = require('moment')
 
-const allPlatforms = ['osx', 'winx64', 'winia32', 'ios', 'android', 'unknown', 'linux', 'darwin']
+const allPlatforms = ['osx', 'winx64', 'winia32', 'ios', 'android', 'unknown', 'linux', 'darwin', 'androidbrowser']
 exports.allPlatforms = allPlatforms
 
 const allChannels = ['dev', 'beta', 'stable']
