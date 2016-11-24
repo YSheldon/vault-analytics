@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "build": "rm -rf dist/ && ./node_modules/.bin/babel src --out-dir dist --source-maps",
-    "preinstall": "babel src --out-dir dist --source-maps",
+    "preinstall": "./node_modules/.bin/babel src --out-dir dist --source-maps",
     "lint": "standard",
     "postinstall": "bower cache clean && bower install",
     "test": "tap test/*.js"
