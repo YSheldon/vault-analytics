@@ -1,41 +1,56 @@
 #!/usr/bin/env node
-var db = require('../dist/mongoc')
-var reporting = require('../dist/retriever')
-var model = require('../dist/model')
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 var async = require('async')
 var _ = require('underscore')
+var path = require('path')
+
+var retriever = require('../dist/retriever')
+var model = require('../dist/model')
+var reporter = require('../dist/reporter')
 var pgc = require('../dist/pgc')
+var mongoc = require('../dist/mongoc')
 
-// Connect to postgres
-pgc.setup(function (err, client) {
-  if (err) {
-    throw new Error(err)
+console.log('Update daily crash totals for laptop')
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
+
+function resourcesReady (setupError, resources) {
+  var cleanup = function () {
+    // Close connections to Postgres and Mongo
+    resources.pg.end()
+    resources.mg.close()
   }
-  console.log('Update daily crash totals for laptop')
-  console.log('Connected to postgres')
 
-  db.setup(function(err, connection) {
-    if (err) {
-      throw new Error(err)
-    }
+  var resultsHandler = function(err, results) {
+    if (err) throw err
 
-    console.log('Connected to mongo')
-    reporting.dailyCrashReportsFullGrouped(connection, function(err, results) {
-      // Build funcs to execute
-      var funcs = _.map(results, function(row) {
-        return model.crashUpserter(client, row)
-      })
-
-      // Insert rows
-      async.series(funcs, function(err, results) {
-        if (err) {
-          throw new Error(err)
-        }
-        console.log('Done')
-        client.end()
-        connection.close()
-      })
+    // Build funcs to execute
+    var funcs = _.map(results, function(row) {
+      return model.crashUpserter(resources.pg, row)
     })
-  })
-})
+
+    console.log("Updating " + results.length + " rows")
+
+    // Insert rows
+    async.series(funcs, function(err, results) {
+      if (err) {
+        throw new Error(err)
+      }
+      // Report the results of the job run
+      reporter.shutdown(runInfo, resources.pg, cleanup)
+    })
+  }
+
+  retriever.dailyCrashReportsFullGrouped(resources.mg, resultsHandler)
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup,
+  mg: mongoc.setup
+}, resourcesReady)
