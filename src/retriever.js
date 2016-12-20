@@ -383,3 +383,30 @@ exports.monthlyUsersByDay = (db, cb, collection) => {
     cb(err, result)
   })
 }
+
+exports.dailyTelemetry = (db, collection, days, cb) => {
+  days = days || 7
+
+  var limit = moment().subtract(days, 'days').format('YYYY-MM-DD')
+  console.log(`Retrieving records on and after ${limit}`)
+
+  var query = db.collection(collection).aggregate([
+    {
+      $match: {
+        ymd: { $gte: limit }
+      }
+    },
+    {
+      $sort: {
+        'ymd': -1,
+        'platform': 1,
+        'version': 1,
+        'channel': 1,
+        'measure': 1,
+        'machine': 1
+      }
+    }
+  ])
+
+  query.toArray(cb)
+}

@@ -18,6 +18,8 @@ let stats = require('./api/stats')
 let crashes = require('./api/crashes')
 let search = require('./api/search')
 let eyeshade = require('./api/eyeshade')
+let publishers = require('./api/publishers')
+let telemetry = require('./api/telemetry')
 
 let setGlobalHeader = require('hapi-set-header')
 
@@ -42,6 +44,7 @@ let kickoff = (err, connections) => {
     port: config.port
   })
   server.register(Inert, function () {})
+  server.register(require('blipp'), function () {})
 
   // Handle the boom response as well as all other requests (cache control for telemetry)
   setGlobalHeader(server, 'Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0')
@@ -53,7 +56,7 @@ let kickoff = (err, connections) => {
   })
 
   // Setup the APIs
-  _.each([stats, jobs, crashes, search, eyeshade], (api) => { api.setup(server, connections.pg, connections.mg) })
+  _.each([stats, jobs, crashes, search, eyeshade, publishers, telemetry], (api) => { api.setup(server, connections.pg, connections.mg) })
 
   // Setup the UI for the dashboard
   ui.setup(server)
