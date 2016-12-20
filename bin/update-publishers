@@ -47,7 +47,9 @@ var resourcesReady = function(asyncError, resources) {
     })
     async.series(funcs, (asyncErr, results) => {
       if (asyncErr) { throw new Error(asyncErr) }
-      cleanup()
+      console.log('Updated ' + ymdRows.length + ' publisher daily records')
+      // Report the results of the job run
+      reporter.shutdown(runInfo, resources.pg, cleanup)
     })
   })
 }
