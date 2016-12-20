@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+var async = require('async')
+var _ = require('underscore')
+var path = require('path')
+
+// Set the runtime Mongo URL to eyeshade
+process.env.MONGOLAB_URI = process.env.EYESHADE_URI
+
+var mongoc = require('../dist/mongoc')
+var pgc = require('../dist/pgc')
+var publishers = require('../dist/publishers')
+var reporter = require('../dist/reporter')
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
+
+console.log('Update eyeshade publisher counts ' + jobName)
+
+const QUERY = `
+INSERT INTO dw.fc_daily_publishers (ymd, total, verified, address, irs)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (ymd) DO UPDATE SET
+  total = $2,
+  verified = $3,
+  address = $4,
+  irs = $5
+`
+
+// This is triggered when all resources have valid connections
+var resourcesReady = function(asyncError, resources) {
+  var cleanup = function () {
+    // Close connections to Postgres and Mongo
+    resources.pg.end()
+    resources.mg.close()
+  }
+
+  publishers.all(resources.mg, function (err, ymdRows) {
+    var funcs = ymdRows.map((row) => {
+      return (cb) => {
+        resources.pg.query(QUERY, [row.ymd, row.total, row.verified, row.address, row.irs], cb)
+      }
+    })
+    async.series(funcs, (asyncErr, results) => {
+      if (asyncErr) { throw new Error(asyncErr) }
+      cleanup()
+    })
+  })
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup,
+  mg: mongoc.setup
+}, resourcesReady)
