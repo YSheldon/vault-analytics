@@ -1,0 +1,83 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+var async = require('async')
+var _ = require('underscore')
+var fs = require('fs')
+var path = require('path')
+var ss = require('simple-statistics')
+
+var mongoc = require('../dist/mongoc')
+var retriever = require('../dist/retriever')
+var model = require('../dist/model')
+var reporter = require('../dist/reporter')
+var pgc = require('../dist/pgc')
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
+
+console.log('Updating telemetry - ' + jobName)
+
+var deriveStats = function(rows) {
+  var keys = ['ymd', 'platform', 'version', 'channel', 'measure', 'machine']
+  var groups = _.groupBy(rows, function (row) {
+    return _.map(keys, function (k) { return row[k] }).join('|')
+  })
+  var results = _.map(groups, function (records, k) {
+    var values = _.pluck(records, 'value')
+    var row = {
+      minimum: ss.min(values),
+      maximum: ss.max(values),
+      average: ss.mean(values),
+      stddev: ss.standardDeviation(values),
+      samples: values.length,
+      quant25: ss.quantile(values, 0.25),
+      quant75: ss.quantile(values, 0.75)
+    }
+    var keyValues = k.split('|')
+    _.each(keys, function (keyName, idx) { row[keyName] = keyValues[idx] })
+    return row
+  })
+  return results
+}
+
+// This is triggered when all resources have valid connections
+var resourcesReady = function(asyncError, resources) {
+  var cleanup = function () {
+    // Close connections to Postgres and Mongo
+    resources.pg.end()
+    resources.mg.close()
+  }
+
+  // Retrieve the daily active user stats
+  retriever.dailyTelemetry(resources.mg, 'telemetry3', 60, function(err, results) {
+    // calculate the stats
+    results = deriveStats(results)
+    
+    // Build funcs to execute
+    var funcs = _.map(results, function(row) {
+      return model.telemetryUpserter(resources.pg, row)
+    })
+
+    console.log('Retrieved results from Mongo')
+    console.log('Updating ' + results.length + ' rows in Postgres')
+
+        // Insert rows
+    async.series(funcs, function(err, results) {
+      if (err) {
+        throw new Error(err)
+      }
+      // Report the results of the job run
+      reporter.shutdown(runInfo, resources.pg, cleanup)
+    })
+  })
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup,
+  mg: mongoc.setup
+}, resourcesReady)
