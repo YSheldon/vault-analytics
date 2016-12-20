@@ -12,18 +12,6 @@ var colors = [
   [23, 190, 207]   // 17becf
 ]
 
-// Build graph styles
-var styles = _.map(colors, function(color) {
-  return {
-    fillColor: "rgba(" + color.join(', ') + ", 0.1)",
-    strokeColor: "rgba(" + color.join(', ') + ", 0.4)",
-    pointColor: "rgba(" + color.join(', ') + ", 0.4)",
-    pointStrokeColor: "#fff",
-    pointHighlightFill: "#fff",
-    pointHighlightStroke: "rgba(" + color.join(', ') + ", 0.4)"
-  }
-})
-
 // Platform meta data
 var platforms = {
   osx: {
@@ -141,6 +129,47 @@ var stp = function (num) {
 }
 
 var b = function(text) { return '<strong>' + text + "</strong>" }
+
+var overviewPublisherHandler = function (overview) {
+  var overviewTable = $("#overview-publishers-table tbody")
+  overviewTable.empty()
+
+  overviewTable.append(tr([
+    td("Publishers"),
+    td(st(overview.total), "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("Verified"),
+    td(st(overview.verified), "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("Percentage of publishers verified"),
+    td(numeral(overview.verified / overview.total).format('0.0%'), "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("Bitcoin Address"),
+    td(st(overview.address), "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("Percentage of publishers with Bitcoin address"),
+    td(numeral(overview.address / overview.total).format('0.0%'), "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("IRS Forms"),
+    td(st(overview.irs), "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
+    td("Percentage of publishers with IRS forms"),
+    td(numeral(overview.irs / overview.total).format('0.0%'), "right"),
+    td()
+  ]))
+}
 
 var overviewMonthAveragesHandler = function (rows) {
   var tblHead = $("#monthly-averages-table thead")
@@ -338,6 +367,42 @@ var topCrashHandler = function(rows) {
   })
 }
 
+// Return an rgba(x, x, x, x) text string by label
+var colourForLabel = function (label, opacity) {
+  return colourForIndex({
+    'winx64': 5,
+    'winia32': 4,
+    'osx': 2,
+    'linux': 3,
+    'ios': 6,
+    'android': 0,
+    'Link Bubble': 0,
+    'androidbrowser': 1,
+    'Android Browser': 1
+  }[label] || 0, opacity)
+}
+
+// Return an rgba(x, x, x, x) text string by index
+var colourForIndex = function (idx, opacity) {
+  opacity = opacity || 1
+  return 'rgba(' + colors[idx][0] + ', ' + colors[idx][1] + ', ' + colors[idx][2] + ', ' + opacity + ')'
+}
+
+// Standard configuration object for line graphs
+var standardYAxisOptions = {
+  tooltips: {
+    mode: 'x',
+    position: 'nearest'
+  },
+  scales: {
+    yAxes: [{
+      ticks: {
+        beginAtZero: true
+      }
+    }]
+  }
+}
+
 var statsHandler = function(rows) {
   // Build the table
   var table = $('#statsDataTable tbody')
@@ -383,7 +448,7 @@ var statsHandler = function(rows) {
       return _.extend({
         label: ys[idx],
         data: dataset
-      }, styles[idx])
+      })
     })
   }
 
@@ -393,9 +458,110 @@ var statsHandler = function(rows) {
 
   var statsChart = document.getElementById("statsChart")
   var ctx = statsChart.getContext("2d")
-  var myChart = new Chart(ctx).Line(data)
-  $("#statsChartLegend").html(myChart.generateLegend())
+  var myChart = new Chart.Line(ctx, { data: data, options: standardYAxisOptions })
+}
 
+var buildTelemetryChartBuilder = function (opts) {
+  opts = opts || {}
+
+  var grouperLabel = function (row) {
+    return [row.platform, row.version, row.channel, row.machine, row.measure].join('-')
+  }
+
+  return function (rows) {
+    // Build a list of unique labels (ymd)
+    var ymds = _.chain(rows)
+        .map(function(row) { return row.ymd })
+        .uniq()
+        .sort()
+        .value()
+
+    // Build a list of unique data sets (platform)
+    var ys = _.chain(rows)
+        .map(function(row) { return grouperLabel(row) })
+        .uniq()
+        .value()
+
+    var groups = _.groupBy(rows, function (row) {
+      return grouperLabel(row)
+    })
+
+    // Associate the data
+    var product = _.object(_.map(ymds, function(ymd) {
+      return [ymd, {}]
+    }))
+    rows.forEach(function(row) {
+      if (!product[row.ymd][grouperLabel(row)]) product[row.ymd][grouperLabel(row)] = {}
+      product[row.ymd][grouperLabel(row)].average = row.average
+      product[row.ymd][grouperLabel(row)].minimum = row.minimum
+      product[row.ymd][grouperLabel(row)].maximum = row.maximum
+      product[row.ymd][grouperLabel(row)].quant25 = row.quant25
+      product[row.ymd][grouperLabel(row)].quant75 = row.quant75
+    })
+
+    var opacityByIndex = function (idx) {
+      return {
+        0: 0.05,
+        1: 0.2,
+        2: 1,
+        3: 0.2,
+        4: 0.05
+      }[idx]
+    }
+
+    var datasets = []
+    var labels = []
+    var measureCount = 0
+    _.each(groups, function (groupedRows, k) {
+      ['minimum', 'quant25', 'average', 'quant75', 'maximum'].map(function (fld, idx) {
+        labels.push({
+          label: k + '-' + fld,
+          idx: measureCount,
+          opacity: opacityByIndex(idx)
+        })
+        datasets.push(_.map(ymds, function (ymd, idx) {
+          return product[ymd][k][fld]
+        }))
+      })
+      measureCount += 1
+    })
+
+    var regressionData = _.map(datasets[0], function (v, idx) { return [idx, v] })
+    console.log(ss.linearRegression(regressionData))
+
+    var data = {
+      labels: ymds,
+      datasets: _.map(datasets, function(dataset, idx) {
+        return {
+          label: labels[idx].label,
+          data: dataset,
+          borderColor: colourForIndex(labels[idx].idx, labels[idx].opacity),
+          fill: false
+        }
+      })
+    }
+
+    var container = $("#telemetryChartContainer")
+    container.empty()
+    container.append("<canvas id='telemetryUsageChart' height='350' width='800'></canvas>")
+
+    var chartOptions = _.extend(_.clone(standardYAxisOptions), {
+      onClick: function (evt, points) {
+        if (points.length) {
+          var ymd = points[0]._xScale.ticks[points[0]._index]
+          $.ajax('/api/1/ci/telemetry/' + ymd + '?' + standardTelemetryParams(), {
+            success: function (results) {
+              // detailed telemetry items
+              console.log(results)
+            }
+          })
+        }
+      }
+    })
+
+    var usageChart = document.getElementById("telemetryUsageChart")
+    new Chart.Line(usageChart.getContext("2d"), { data: data, options: chartOptions })
+  }
 }
 
 // Build a handler for a successful API request
@@ -412,7 +578,7 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
     return formatter(value)
   }
 
-  return function(rows) {
+  return function (rows) {
     var table = $('#usageDataTable tbody')
     table.empty()
     var ctrl = rows[x]
@@ -480,41 +646,55 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
       datasets.push(dataset)
     })
 
+    // Determine the colour of the line by label or index
+    var colourer = function (idx, opacity) { return colourForLabel(ys[idx], opacity) }
+    if (opts.colourBy === 'index') {
+      colourer = function (idx, opacity) { return colourForIndex(idx, opacity) }
+    }
+
     var data = {
       labels: labels,
       datasets: _.map(datasets, function(dataset, idx) {
-        return _.extend({
-          label: ys[idx],
-          data: dataset
-        }, styles[idx])
+        return {
+          label: ys[idx] || 'All',
+          data: dataset,
+          borderColor: colourer(idx, 1),
+          pointColor: colourer(idx, 0.5),
+          backgroundColor: colourer(idx, 0.05)
+        }
       })
     }
 
     var container = $("#usageChartContainer")
     container.empty()
-    container.append("<canvas id='usageChart' height='300' width='800'></canvas>")
+    container.append("<canvas id='usageChart' height='350' width='800'></canvas>")
 
     var usageChart = document.getElementById("usageChart")
-    var ctx = usageChart.getContext("2d")
-    var myChart = new Chart(ctx).Line(data, {scaleBeginAtZero: true })
-    $("#usageChartLegend").html(myChart.generateLegend())
+    new Chart.Line(usageChart.getContext("2d"), { data: data, options: standardYAxisOptions })
   }
 }
 
 // Data type success handlers
-var usagePlatformHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform')
-var usageVersionHandler = buildSuccessHandler('ymd', 'version', 'Date', 'Version')
-var usageCrashesHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform')
+var usagePlatformHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { colourBy: 'label' })
+
+var usageVersionHandler = buildSuccessHandler('ymd', 'version', 'Date', 'Version', { colourBy: 'index' })
+
+var usageCrashesHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { colourBy: 'label' })
+
+var telemetryHandler = buildTelemetryChartBuilder('ymd')
 
 var walletsTotalHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: true })
+
 var walletsCurrencyHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: true, currency: true })
 
 var walletsHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: false, percentage: true })
+
 var walletsBalanceAverageHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { showGrandTotal: false, currency: true })
 
 // Array of content panels
 var contents = [
   "usageContent",
+  "usageTelemetry",
   "crashesContent",
   "overviewContent",
   "statsContent",
@@ -546,6 +726,18 @@ var standardParams = function() {
     channelFilter: serializeChannelParams(),
     showToday: pageState.showToday,
     version: pageState.version
+  })
+}
+
+var standardTelemetryParams = function() {
+  return $.param({
+    days: pageState.days,
+    platformFilter: serializePlatformParams(),
+    channelFilter: serializeChannelParams(),
+    showToday: pageState.showToday,
+    version: pageState.version,
+    measure: pageState.measure,
+    machine: pageState.machine
   })
 }
 
@@ -703,6 +895,10 @@ var overviewRetriever = function () {
     success: overviewMonthAveragesHandler
   })
 
+  $.ajax('/api/1/publishers/overview', {
+    success: overviewPublisherHandler
+  })
+
   $.ajax('/api/1/dau_platform_first_summary', {
     success: function(rows) {
       $.ajax('/api/1/ledger_overview', {
@@ -742,6 +938,38 @@ var eyeshadeFundedBalanceAverageRetriever = function() {
   $.ajax('/api/1/eyeshade_funded_balance_average_wallets?' + standardParams(), {
     success: walletsBalanceAverageHandler
   })
+}
+
+var eyeshadeFundedBalanceAverageRetriever = function() {
+  $.ajax('/api/1/eyeshade_funded_balance_average_wallets?' + standardParams(), {
+    success: walletsBalanceAverageHandler
+  })
+}
+
+var telemetryRetriever = function () {
+  $.ajax('/api/1/ci/telemetry?' + standardTelemetryParams(), {
+    success: telemetryHandler
+  })
+}
+
+var fillOptionsIfNotEmpty = function (url, id) {
+  var select = $("#" + id)
+  if (select.children().length <= 1) {
+    $.ajax(url, {
+      success: function(results) {
+        results.forEach(function (item) {
+          select.append("<option value='" + item + "'>" + item + "</option>")
+        })
+      }
+    })
+  }
+}
+
+var telemetryStandardRetriever = function() {
+  fillOptionsIfNotEmpty('/api/1/ci/measures', 'measures')
+  fillOptionsIfNotEmpty('/api/1/ci/machines', 'machines')
+  fillOptionsIfNotEmpty('/api/1/ci/versions', 'telemetryVersions')
+  telemetryRetriever()
 }
 
 // Object of menu item meta data
@@ -882,6 +1110,12 @@ var menuItems = {
     subtitle: "Average balance of funded wallets per day in USD ($)",
     retriever: eyeshadeFundedBalanceAverageRetriever
   },
+  "mnTelemetryStandard": {
+    show: "usageTelemetry",
+    title: "Telemetry Navigator",
+    subtitle: "Browser telemetry by measure, machine and version",
+    retriever: telemetryStandardRetriever
+  },
 }
 
 // Mutable page state
@@ -973,6 +1207,21 @@ $("#daysSelector").on('change', function (evt, value) {
   refreshData()
 })
 
+$("#machines").on('change', function (evt, value) {
+  pageState.machine = this.value
+  refreshData()
+})
+
+$("#measures").on('change', function (evt, value) {
+  pageState.measure = this.value
+  refreshData()
+})
+
+$("#telemetryVersions").on('change', function (evt, value) {
+  pageState.version = this.value
+  refreshData()
+})
+
 $("#crash-ratio-versions").on('change', function (evt, value) {
   pageState.version = this.value
   refreshData()
@@ -1004,7 +1253,6 @@ var updatePageUIState = function() {
   } else {
     $('#controls').hide()
   }
-
 }
 
 // Load data for the selected item
@@ -1204,6 +1452,13 @@ router.get('eyeshade_funded_balance_average', function(req) {
   refreshData()
 })
 
+router.get('telemetry_standard', function(req) {
+  pageState.currentlySelected = 'mnTelemetryStandard'
+  viewState.showControls = true
+  updatePageUIState()
+  refreshData()
+})
+
 // Display a single crash report
 router.get('crash/:id', function(req) {
   pageState.currentlySelected = 'mnTopCrashes'
@@ -1365,9 +1620,38 @@ var filterLinksOn = function (text) {
   }
 }
 
+$("#filterMAU").on('click', function (evt) {
+  evt.preventDefault()
+  $("#searchLinks").val('MAU')
+  filterLinksOn('MAU')
+})
+
+$("#filterDAU").on('click', function (evt) {
+  evt.preventDefault()
+  $("#searchLinks").val('DAU')
+  filterLinksOn('DAU')
+})
+
+$("#filterLedger").on('click', function (evt) {
+  evt.preventDefault()
+  $("#searchLinks").val('Ledger')
+  filterLinksOn('Ledger')
+})
+
+$("#filterCrashes").on('click', function (evt) {
+  evt.preventDefault()
+  $("#searchLinks").val('Crash')
+  filterLinksOn('Crash')
+})
+
+$("#filterTelemetry").on('click', function (evt) {
+  evt.preventDefault()
+  $("#searchLinks").val('Telemetry')
+  filterLinksOn('Telemetry')
+})
+
 var searchInputHandler = function (e) {
   var q = this.value
-  console.log(q)
   var table = $("#search-results-table tbody")
   if (!q) {
     $("#searchComments").hide()
