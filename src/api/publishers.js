@@ -17,6 +17,23 @@ SELECT
 FROM dw.fc_daily_publishers
 `
 
+const PUBLISHERS_DAILY = `
+SELECT
+  TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd,
+  total,
+  verified,
+  address,
+  irs
+FROM dw.fc_daily_publishers
+WHERE ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-09-01'::date)
+ORDER BY ymd
+`
+
+// Return an array containing a day offset i.e. ['3 days']
+const commonDaysParamsBuilder = (request) => {
+  return [parseInt(request.query.days || 7) + ' days']
+}
+
 // Endpoint definitions
 exports.setup = (server, client, mongo) => {
   // Publishers overview
@@ -34,6 +51,27 @@ exports.setup = (server, client, mongo) => {
         reply(row)
       },
       (request) => { return [] }
+    )
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/publishers/daily',
+    handler: common.buildQueryReponseHandler(
+      client,
+      PUBLISHERS_DAILY,
+      (reply, results, request) => {
+        var rows = _.map(results.rows, (row) => {
+          _.keys(row).forEach((k) => {
+            if (k !== 'ymd') {
+              row[k] = parseFloat(row[k])
+            }
+          })
+          return row
+        })
+        reply(rows)
+      },
+      commonDaysParamsBuilder
     )
   })
 }
