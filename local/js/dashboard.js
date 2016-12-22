@@ -1,17 +1,3 @@
-// High contrast color palette (https://github.com/mbostock/d3/wiki/Ordinal-Scales#categorical-colors)
-var colors = [
-  [31, 119, 180],  // 1f77b4
-  [255, 127, 14],  // ff7f0e
-  [44, 160, 44],   // 2ca02c
-  [214, 39, 40],   // d62728
-  [148, 103, 189], // 9467bd
-  [140, 86, 75],   // 8c564b
-  [227, 119, 194], // e377c2
-  [127, 127, 127], // 7f7f7f
-  [188, 189, 34],  // bcbd22
-  [23, 190, 207]   // 17becf
-]
-
 // Platform meta data
 var platforms = {
   osx: {
@@ -72,12 +58,6 @@ var channelKeys = _.keys(channels)
 
 var reversePlatforms = _.object(_.map(platforms, function(platform) { return [platform.label, platform] }))
 
-var safeDivide = function (n, d, def) {
-  def = def || 0
-  if (!d || d === 0) return def
-  return n / d
-}
-
 var round = function (x, n) {
   n = n || 0
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
@@ -130,46 +110,6 @@ var stp = function (num) {
 
 var b = function(text) { return '<strong>' + text + "</strong>" }
 
-var overviewPublisherHandler = function (overview) {
-  var overviewTable = $("#overview-publishers-table tbody")
-  overviewTable.empty()
-
-  overviewTable.append(tr([
-    td("Publishers"),
-    td(st(overview.total), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("Verified"),
-    td(st(overview.verified), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("Percentage of publishers verified"),
-    td(numeral(overview.verified / overview.total).format('0.0%'), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("Bitcoin Address"),
-    td(st(overview.address), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("Percentage of publishers with Bitcoin address"),
-    td(numeral(overview.address / overview.total).format('0.0%'), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("IRS Forms"),
-    td(st(overview.irs), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("Percentage of publishers with IRS forms"),
-    td(numeral(overview.irs / overview.total).format('0.0%'), "right"),
-    td()
-  ]))
-}
 
 var overviewMonthAveragesHandler = function (rows) {
   var tblHead = $("#monthly-averages-table thead")
@@ -200,16 +140,16 @@ var overviewMonthAveragesHandler = function (rows) {
 
     if (last) {
       diffs = {
-        mau_per: safeDivide(platformMonth.mau - last.mau, platformMonth.mau),
-        dau_per: safeDivide(platformMonth.dau - last.dau, platformMonth.dau),
-        first_time_per: safeDivide(platformMonth.first_time - last.first_time, platformMonth.first_time)
+        mau_per: window.STATS.COMMON.safeDivide(platformMonth.mau - last.mau, platformMonth.mau),
+        dau_per: window.STATS.COMMON.safeDivide(platformMonth.dau - last.dau, platformMonth.dau),
+        first_time_per: window.STATS.COMMON.safeDivide(platformMonth.first_time - last.first_time, platformMonth.first_time)
       }
     }
     b = b + '<div>' + st(platformMonth.mau) + fdiff(diffs, 'mau') + '</div>'
     b = b + '<div>' + st(platformMonth.dau) + fdiff(diffs, 'dau') + '</div>'
     b = b + '<div>' + st(platformMonth.first_time) + fdiff(diffs, 'first_time') + '</div>'
-    b = b + '<div>' + std(safeDivide(platformMonth.dau, platformMonth.mau)) + '</div>'
-    b = b + '<div>' + st1(safeDivide(platformMonth.mau, platformMonth.first_time)) + '</div>'
+    b = b + '<div>' + std(window.STATS.COMMON.safeDivide(platformMonth.dau, platformMonth.mau)) + '</div>'
+    b = b + '<div>' + st1(window.STATS.COMMON.safeDivide(platformMonth.mau, platformMonth.first_time)) + '</div>'
     return b
   }
 
@@ -367,41 +307,6 @@ var topCrashHandler = function(rows) {
   })
 }
 
-// Return an rgba(x, x, x, x) text string by label
-var colourForLabel = function (label, opacity) {
-  return colourForIndex({
-    'winx64': 5,
-    'winia32': 4,
-    'osx': 2,
-    'linux': 3,
-    'ios': 6,
-    'android': 0,
-    'Link Bubble': 0,
-    'androidbrowser': 1,
-    'Android Browser': 1
-  }[label] || 0, opacity)
-}
-
-// Return an rgba(x, x, x, x) text string by index
-var colourForIndex = function (idx, opacity) {
-  opacity = opacity || 1
-  return 'rgba(' + colors[idx][0] + ', ' + colors[idx][1] + ', ' + colors[idx][2] + ', ' + opacity + ')'
-}
-
-// Standard configuration object for line graphs
-var standardYAxisOptions = {
-  tooltips: {
-    mode: 'x',
-    position: 'nearest'
-  },
-  scales: {
-    yAxes: [{
-      ticks: {
-        beginAtZero: true
-      }
-    }]
-  }
-}
 
 var statsHandler = function(rows) {
   // Build the table
@@ -458,7 +363,7 @@ var statsHandler = function(rows) {
 
   var statsChart = document.getElementById("statsChart")
   var ctx = statsChart.getContext("2d")
-  var myChart = new Chart.Line(ctx, { data: data, options: standardYAxisOptions })
+  var myChart = new Chart.Line(ctx, { data: data, options: window.STATS.COMMON.standardYAxisOptions })
 }
 
 var buildTelemetryChartBuilder = function (opts) {
@@ -535,7 +440,7 @@ var buildTelemetryChartBuilder = function (opts) {
         return {
           label: labels[idx].label,
           data: dataset,
-          borderColor: colourForIndex(labels[idx].idx, labels[idx].opacity),
+          borderColor: window.STATS.COLOR.colorForIndex(labels[idx].idx, labels[idx].opacity),
           fill: false
         }
       })
@@ -545,7 +450,7 @@ var buildTelemetryChartBuilder = function (opts) {
     container.empty()
     container.append("<canvas id='telemetryUsageChart' height='350' width='800'></canvas>")
 
-    var chartOptions = _.extend(_.clone(standardYAxisOptions), {
+    var chartOptions = _.extend(_.clone(window.STATS.COMMON.standardYAxisOptions), {
       onClick: function (evt, points) {
         if (points.length) {
           var ymd = points[0]._xScale.ticks[points[0]._index]
@@ -646,10 +551,10 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
       datasets.push(dataset)
     })
 
-    // Determine the colour of the line by label or index
-    var colourer = function (idx, opacity) { return colourForLabel(ys[idx], opacity) }
+    // Determine the color of the line by label or index
+    var colourer = function (idx, opacity) { return window.STATS.COLOR.colorForLabel(ys[idx], opacity) }
     if (opts.colourBy === 'index') {
-      colourer = function (idx, opacity) { return colourForIndex(idx, opacity) }
+      colourer = function (idx, opacity) { return window.STATS.COLOR.colorForIndex(idx, opacity) }
     }
 
     var data = {
@@ -670,7 +575,7 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
     container.append("<canvas id='usageChart' height='350' width='800'></canvas>")
 
     var usageChart = document.getElementById("usageChart")
-    new Chart.Line(usageChart.getContext("2d"), { data: data, options: standardYAxisOptions })
+    new Chart.Line(usageChart.getContext("2d"), { data: data, options: window.STATS.COMMON.standardYAxisOptions })
   }
 }
 
@@ -694,6 +599,7 @@ var walletsBalanceAverageHandler = buildSuccessHandler('ymd', 'platform', 'Date'
 // Array of content panels
 var contents = [
   "usageContent",
+  "publisherContent",
   "usageTelemetry",
   "crashesContent",
   "overviewContent",
@@ -896,7 +802,7 @@ var overviewRetriever = function () {
   })
 
   $.ajax('/api/1/publishers/overview', {
-    success: overviewPublisherHandler
+    success: window.STATS.PUB.overviewPublisherHandler
   })
 
   $.ajax('/api/1/dau_platform_first_summary', {
@@ -1115,6 +1021,12 @@ var menuItems = {
     title: "Telemetry Navigator",
     subtitle: "Browser telemetry by measure, machine and version",
     retriever: telemetryStandardRetriever
+  },
+  "mnDailyPublishers": {
+    show: "publisherContent",
+    title: "Daily Publisher Status",
+    subtitle: "Publisher activations by day",
+    retriever: window.STATS.PUB.publisherDailyRetriever
   },
 }
 
@@ -1459,6 +1371,13 @@ router.get('telemetry_standard', function(req) {
   refreshData()
 })
 
+router.get('daily_publishers', function(req) {
+  pageState.currentlySelected = 'mnDailyPublishers'
+  viewState.showControls = true
+  updatePageUIState()
+  refreshData()
+})
+
 // Display a single crash report
 router.get('crash/:id', function(req) {
   pageState.currentlySelected = 'mnTopCrashes'
@@ -1642,6 +1561,12 @@ $("#filterCrashes").on('click', function (evt) {
   evt.preventDefault()
   $("#searchLinks").val('Crash')
   filterLinksOn('Crash')
+})
+
+$("#filterPublisher").on('click', function (evt) {
+  evt.preventDefault()
+  $("#searchLinks").val('Publisher')
+  filterLinksOn('Publisher')
 })
 
 $("#filterTelemetry").on('click', function (evt) {
