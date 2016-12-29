@@ -43,7 +43,7 @@ var retrieveFabricCSV = function (url, done) {
     url: url,
     method: 'GET',
     headers: {
-      Cookie: '_session_id=' + process.env.FABRIC_SESSION,
+      Cookie: '_fabric_session=' + process.env.FABRIC_SESSION,
       'Upgrade-Insecure-Requests': 1
     }
   }
