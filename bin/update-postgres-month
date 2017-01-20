@@ -37,6 +37,10 @@ var resourcesReady = function(asyncError, resources) {
 
   console.log('Update monthly totals for ' + args.collection)
   var resultsHandler = function(err, results) {
+    if (err) {
+      throw new Error(err)
+    }
+
     // disambiguate between Link Bubble and tabbed browser
     if (args.collection === 'android_usage') {
       results.forEach(function (result) {
