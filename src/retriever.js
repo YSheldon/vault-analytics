@@ -324,9 +324,18 @@ exports.dailyActiveiOSUsersFullGrouped = (db, exceptions, cb) => {
 exports.monthlyUsersByDay = (db, cb, collection) => {
   collection = collection || 'usage'
 
+  var limit = moment().subtract(1, 'month').startOf('month').format('YYYY-MM-DD')
+
   var query = db.collection(collection).aggregate([
     {
-      $match: { monthly: true }
+      $match: {
+        monthly: true
+      }
+    },
+    {
+      $match: {
+        year_month_day: { $gte: limit }
+      }
     },
     {
       $project: {
@@ -349,11 +358,6 @@ exports.monthlyUsersByDay = (db, cb, collection) => {
             }
           }
         }
-      }
-    },
-    {
-      $match: {
-        ymd: { $gt: '2016-01-18' }
       }
     },
     {

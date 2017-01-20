@@ -41,6 +41,8 @@ var resourcesReady = function(asyncError, resources) {
       throw new Error(err)
     }
 
+    console.log("Updating " + results.length + " rows")
+
     // disambiguate between Link Bubble and tabbed browser
     if (args.collection === 'android_usage') {
       results.forEach(function (result) {
