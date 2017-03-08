@@ -1036,13 +1036,13 @@ var pageState = {
   days: 14,
   version: null,
   platformFilter: {
-    osx: false,
-    winx64: false,
-    winia32: false,
-    linux: false,
-    ios: false,
+    osx: true,
+    winx64: true,
+    winia32: true,
+    linux: true,
+    ios: true,
     android: false,
-    androidbrowser: false
+    androidbrowser: true
   },
   channelFilter: {
     dev: true,
