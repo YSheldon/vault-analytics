@@ -1,43 +1,37 @@
 (function () {
-  var overviewPublisherHandler = function (overview) {
+  var overviewPublisherHandler = function (overview, buckets) {
     var overviewTable = $("#overview-publishers-table tbody")
     overviewTable.empty()
 
     overviewTable.append(tr([
       td("Publishers"),
-      td(st(overview.total), "right"),
-      td()
+      td(st(overview.total), "left")
     ]))
     overviewTable.append(tr([
       td("Verified"),
-      td(st(overview.verified), "right"),
-      td()
+      ptd(st(overview.verified), numeral(overview.verified / overview.total).format('0.0%'), "left")
     ]))
     overviewTable.append(tr([
-      td("Percentage of publishers verified"),
-      td(numeral(overview.verified / overview.total).format('0.0%'), "right"),
-      td()
-    ]))
-    overviewTable.append(tr([
-      td("Bitcoin Address"),
-      td(st(overview.address), "right"),
-      td()
-    ]))
-    overviewTable.append(tr([
-      td("Percentage of publishers with Bitcoin address"),
-      td(numeral(overview.address / overview.total).format('0.0%'), "right"),
-      td()
+      td("Authorized"),
+      ptd(st(overview.authorized), numeral(overview.authorized / overview.total).format('0.0%'), "left")
     ]))
     overviewTable.append(tr([
       td("IRS Forms"),
-      td(st(overview.irs), "right"),
-      td()
+      ptd(st(overview.irs), numeral(overview.irs / overview.total).format('0.0%'), "left")
     ]))
-    overviewTable.append(tr([
-      td("Percentage of publishers with IRS forms"),
-      td(numeral(overview.irs / overview.total).format('0.0%'), "right"),
-      td()
-    ]))
+
+    var bucketTable = $("#overview-publishers-bucketed-table tbody")
+    bucketTable.empty()
+
+    buckets.forEach(function (bucket) {
+      bucketTable.append(tr([
+        td(bucket.days, "right"),
+        td(st(bucket.total), "right"),
+        ptd(st(bucket.verified), numeral(bucket.verified / bucket.total).format('0.0%'), "right"),
+        ptd(st(bucket.authorized), numeral(bucket.authorized / bucket.total).format('0.0%'), "right"),
+        ptd(st(bucket.irs), numeral(bucket.irs / bucket.total).format('0.0%'), "right")
+      ]))
+    })
   }
 
   var publisherDailyRetriever = function () {
@@ -55,7 +49,7 @@
       buf = buf + '<td>' + row.ymd + '</td>'
       buf = buf + '<td>' + row.total + '</td>'
       buf = buf + '<td>' + row.verified + ' <span class="subvalue">' + numeral(window.STATS.COMMON.safeDivide(row.verified, row.total)).format('0.0%') + '</span></td>'
-      buf = buf + '<td>' + row.address + ' <span class="subvalue">' + numeral(window.STATS.COMMON.safeDivide(row.address, row.total)).format('0.0%') + '</span></td>'
+      buf = buf + '<td>' + row.authorized + ' <span class="subvalue">' + numeral(window.STATS.COMMON.safeDivide(row.authorized, row.total)).format('0.0%') + '</span></td>'
       buf = buf + '<td>' + row.irs + ' <span class="subvalue">' + numeral(window.STATS.COMMON.safeDivide(row.irs, row.total)).format('0.0%') + '</span></td>'
       buf = buf + '</tr>'
       table.append(buf)
@@ -76,11 +70,11 @@
     rows.forEach(function(row) {
       product[row.ymd].total = row.total
       product[row.ymd].verified = row.verified
-      product[row.ymd].address = row.address
+      product[row.ymd].authorized = row.authorized
       product[row.ymd].irs = row.irs
     })
 
-    var ys = ['total', 'verified', 'address', 'irs']
+    var ys = ['total', 'verified', 'authorized', 'irs']
 
     // Build the Chart.js data structure
     var datasets = []

@@ -10,8 +10,8 @@ SELECT
   SUM(total) AS total,
   SUM(verified) AS verified,
   SUM(verified) / SUM(total) AS verified_per,
-  SUM(address) AS address,
-  SUM(address) / SUM(total) AS address_per,
+  SUM(authorized) AS authorized,
+  SUM(authorized) / SUM(total) AS authorized_per,
   SUM(irs) AS irs,
   SUM(irs) / SUM(total) AS irs_per
 FROM dw.fc_daily_publishers
@@ -22,7 +22,7 @@ SELECT
   TO_CHAR(ymd, 'YYYY-MM-DD') AS ymd,
   total,
   verified,
-  address,
+  authorized,
   irs
 FROM dw.fc_daily_publishers
 WHERE ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-09-01'::date)
@@ -33,6 +33,22 @@ ORDER BY ymd
 const commonDaysParamsBuilder = (request) => {
   return [parseInt(request.query.days || 7) + ' days']
 }
+
+const emptyParamsBuilder = (request) => {
+  return []
+}
+
+const PUBLISHERS_BUCKETED = 'SELECT * FROM (' + [7, 14, 30, 60, 120].map((days) => {
+  return `
+SELECT
+  ${days} as days,
+  sum(total) as total,
+  sum(verified) as verified,
+  sum(authorized) as authorized,
+  sum(irs) as irs
+FROM dw.fc_daily_publishers
+WHERE ymd >= current_date - CAST('${days} days' as INTERVAL)`
+}).join(' UNION ') + ') T ORDER BY T.days ASC'
 
 // Endpoint definitions
 exports.setup = (server, client, mongo) => {
@@ -74,4 +90,24 @@ exports.setup = (server, client, mongo) => {
       commonDaysParamsBuilder
     )
   })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/publishers/overview/bucketed',
+    handler: common.buildQueryReponseHandler(
+      client,
+      PUBLISHERS_BUCKETED,
+      (reply, results, request) => {
+        var rows = _.map(results.rows, (row) => {
+          _.keys(row).forEach((k) => {
+            row[k] = parseFloat(row[k])
+          })
+          return row
+        })
+        reply(rows)
+      },
+      emptyParamsBuilder
+    )
+  })
+
 }

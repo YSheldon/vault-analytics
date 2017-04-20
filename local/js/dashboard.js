@@ -70,6 +70,13 @@ var td = function (contents, align, opts) {
   return '<td class="text-' + align + '">' + contents + '</td>'
 }
 
+var ptd = function (val, per, align, opts) {
+  contents = contents || ''
+  align = align || 'left'
+  opts = opts || {}
+  return '<td class="text-' + align + '">' + val + ' <span class="subvalue">' + per + '</span></td>'
+}
+
 var th = function (contents, align, opts) {
   contents = contents || ''
   align = align || 'left'
@@ -802,7 +809,13 @@ var overviewRetriever = function () {
   })
 
   $.ajax('/api/1/publishers/overview', {
-    success: window.STATS.PUB.overviewPublisherHandler
+    success: function (overview) {
+      $.ajax('/api/1/publishers/overview/bucketed', {
+        success: function (buckets) {
+          window.STATS.PUB.overviewPublisherHandler(overview, buckets)
+        }
+      })
+    }
   })
 
   $.ajax('/api/1/dau_platform_first_summary', {
