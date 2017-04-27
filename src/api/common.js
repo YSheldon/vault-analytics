@@ -123,3 +123,4 @@ export function convertPlatformLabels (row) {
   if (row.platform === 'androidbrowser') row.platform = 'Android Browser'
   return row
 }
+

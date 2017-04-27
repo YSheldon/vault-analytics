@@ -142,8 +142,8 @@ SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
   FC.platform,
   SUM(FC.total) AS count,
-ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd AND platform = ANY ($2) AND channel = ANY ($3)), 3) * 100 AS daily_percentage
-FROM dw.fc_usage FC
+  ROUND(SUM(FC.total) / ( SELECT SUM(total) FROM dw.fc_usage WHERE ymd = FC.ymd AND platform = ANY ($2) AND channel = ANY ($3)), 3) * 100 AS daily_percentage
+FROM dw.fc_usage_platform_mv FC
 WHERE
   FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   FC.platform = ANY ($2) AND

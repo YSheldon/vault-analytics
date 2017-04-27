@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 var pgc = require('../dist/pgc')
 var async = require('async')
 
@@ -10,7 +15,8 @@ var mvs = {
     "dw.fc_crashes_process_type_mv"
   ],
   stats: [  
-    "dw.fc_average_monthly_usage_mv"
+    "dw.fc_average_monthly_usage_mv",
+    "dw.fc_usage_platform_mv"
   ]
 }
 
