@@ -32,6 +32,12 @@ export function recordsForDay (ymd, match, done) {
   recordsForPrefix(prefix, match, done)
 }
 
+function filterExtensionLines (text) {
+  return text.split(/\n/)
+    .filter((line) => { return line.indexOf('extensions') === -1 })
+    .join('\n')
+}
+
 // Retrieve parsed download records with a prefix
 export function recordsForPrefix (prefix, match, done) {
   var s3 = new AWS.S3()
@@ -47,7 +53,7 @@ export function recordsForPrefix (prefix, match, done) {
       s3.getObject(params, function (err, data) {
         if (!err) {
           console.log(percent + '% - Downloading and Parsing ' + k)
-          allRecords += "\n" + data.Body.toString()
+          allRecords += "\n" + filterExtensionLines(data.Body.toString())
         }
         cb(err, data)
       })

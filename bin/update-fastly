@@ -108,6 +108,11 @@ var resourcesReady = function(asyncError, resources) {
       throw new Error(s3err)
     }
 
+    // remove records not conforming to the semver format
+    records = records.filter(function (record) {
+      return record.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))
+    })
+
     // Select monthly records
     var monthlySummarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'countryCode', 'dmaCode'], { monthly: true })
 
