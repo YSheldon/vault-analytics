@@ -75,6 +75,42 @@ export const parseLine = (line) => {
   return attributes
 }
 
+export const parseMobileLine = (line) => {
+  var attributes = {}
+  var tokens = line.split(/\s+/)
+
+  // parse the URL component of the log line
+  var parseUrl = (url) => {
+    var components = {}
+    var path, query
+    var $, apiVersion, releases, channel, version, os
+    [path, query] = url.split('?')
+    let tokens = path.split('/')
+
+    if (tokens.length !== 4) {
+      components.invalid = true
+      return components
+    }
+
+    components.apiVersion = parseInt(tokens[1], 10)
+    components.platform = tokens[3]
+    components = _.extend(components, urlUtils.parse(url, true).query)
+    // boolean field handling
+    _.each(['daily', 'weekly', 'monthly', 'first'], (attr) => {
+      components[attr] = components[attr] === 'true'
+    })
+    return components
+  }
+
+  _.extend(attributes, parseUrl(tokens[4]))
+
+  attributes.statusCode = parseInt(tokens[3], 10)
+  attributes.countryCode = tokens[5] || 'unknown'
+  attributes.dmaCode = parseInt(tokens[6] || 0)
+
+  return attributes
+}
+
 /*
   Process log file, running each release line through parseLine
 
@@ -88,11 +124,15 @@ export const parseFile = (filename) => {
     .filter((line) => { return !line.invalid })
 }
 
-export const parseContents = (contents) => {
+export const parseContents = (contents, match) => {
+  var parser = parseLine
+  if (match === 'android' || match === 'ios') {
+    parser = parseMobileLine
+  }
   return contents.split(/\n/)
     .filter((line) => { return line.length })
-    .filter((line) => { return line.match(/releases/) })
-    .map((line) => { return parseLine(line) })
+    .filter((line) => { return line.indexOf(match) !== -1 })
+    .map((line) => { return parser(line) })
     .filter((line) => { return !line.invalid })
 }
 

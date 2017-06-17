@@ -21,6 +21,7 @@ var runInfo = reporter.startup(jobName)
 // Argument parsing
 var args = require('yargs')
     .default('days_ago', 0)
+    .default('match', 'releases')
     .default('overwrite', false)
     .argv
 
@@ -32,7 +33,7 @@ if (args.ymd) {
   ymd = args.ymd
 }
 
-console.log(`Updating daily totals for laptop at ${ymd} from Fastly - ${jobName}`)
+console.log(`Updating daily totals matching ${args.match} at ${ymd} from Fastly - ${jobName}`)
 
 const QUERY = `
 INSERT INTO dw.fc_fastly_usage (ymd, platform, version, channel, first_time, country_code, dma, total)
@@ -52,8 +53,16 @@ var un = function(v, def) {
   return !v ? def : v
 }
 
+var platformConverter = function (platform) {
+  if (platform === 'android') {
+    return 'androidbrowser'
+  }
+  return platform
+}
+
 // Build function references to upsert daily stats
 var buildFastlyUsageUpserter = function (pg, ymd, record) {
+  record.platform = platformConverter(record.platform)
   return function (cb) {
     var params = [
       ymd,
@@ -71,6 +80,7 @@ var buildFastlyUsageUpserter = function (pg, ymd, record) {
 
 // Build function references to upsert monthly stats
 var buildFastlyMonthUsageUpserter = function (pg, ymd, record) {
+  record.platform = platformConverter(record.platform)
   return function (cb) {
     var params = [
       ymd,
@@ -93,7 +103,7 @@ var resourcesReady = function(asyncError, resources) {
   }
 
   // Retrieve parsed S3 releases access records for a day
-  fls.recordsForDay(ymd, function (s3err, records) {
+  fls.recordsForDay(ymd, args.match, function (s3err, records) {
     if (s3err) {
       throw new Error(s3err)
     }
@@ -116,6 +126,8 @@ var resourcesReady = function(asyncError, resources) {
 
     // Build the complete function list
     var allFuncs = dayFuncs.concat(monthFuncs)
+
+    console.log('Insert or updating ' + allFuncs.length + ' records')
 
     // Upsert rows
     async.series(allFuncs, function(err, results) {

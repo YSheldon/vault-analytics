@@ -22,18 +22,18 @@ AWS.config.update({
   sslEnabled: true
 })
 
-export function recordsForHour (ymd, hour, done) {
+export function recordsForHour (ymd, hour, match, done) {
   const prefix = `${ymd}T${hour}`
-  recordsForPrefix(prefix, done)
+  recordsForPrefix(prefix, match, done)
 }
 
-export function recordsForDay (ymd, done) {
+export function recordsForDay (ymd, match, done) {
   const prefix = `${ymd}`
-  recordsForPrefix(prefix, done)
+  recordsForPrefix(prefix, match, done)
 }
 
 // Retrieve parsed download records with a prefix
-export function recordsForPrefix (prefix, done) {
+export function recordsForPrefix (prefix, match, done) {
   var s3 = new AWS.S3()
   var allRecords = []
 
@@ -71,7 +71,7 @@ export function recordsForPrefix (prefix, done) {
         return makeDownloader(contents.Key, Math.round(i / data.Contents.length * 100))
       })
       async.series(funcs, function (asyncError, results) {
-        done(asyncError, logParser.parseContents(allRecords))
+        done(asyncError, logParser.parseContents(allRecords, match))
       })
     }
   })
