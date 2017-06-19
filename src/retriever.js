@@ -174,7 +174,7 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
 }
 
 exports.dailyActiveAndroidUsersFullGrouped = (db, exceptions, cb) => {
-  var limit = moment().subtract(14, 'days').format('YYYY-MM-DD')
+  var limit = moment().subtract(2, 'days').format('YYYY-MM-DD')
   console.log(`Retrieving records on and after ${limit}`)
 
   var query = db.collection('android_usage').aggregate([
