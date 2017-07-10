@@ -29,6 +29,9 @@ function resourcesReady (setupError, resources) {
   var resultsHandler = function(err, results) {
     if (err) throw err
 
+    // only attempt to insert rows with valid version formats
+    results = results.filter((row) => { return row._id.version.match(/^\d+\.\d+\.\d+$/) })
+
     // Build funcs to execute
     var funcs = _.map(results, function(row) {
       return model.crashUpserter(resources.pg, row)
