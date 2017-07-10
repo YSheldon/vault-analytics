@@ -15,13 +15,10 @@ const async = require('async')
 const appannie = require('../dist/appannie')
 const pgc = require('../dist/pgc')
 
-const deleteAllExistingCountries = function (pg, cb) {
-  pg.query('DELETE FROM appannie.dm_countries', [], cb)
-}
-
 const buildCountryInserter = function (pg, country) {
   return function (cb) {
-    pg.query('INSERT INTO appannie.dm_countries (code, name ) VALUES ($1, $2)', [country.country_code, country.country_name], cb)
+    console.log(country)
+    pg.query('INSERT INTO appannie.dm_countries (code, name ) VALUES ($1, $2) ON CONFLICT (code) DO UPDATE SET name = excluded.name', [country.country_code, country.country_name], cb)
   }
 }
 
@@ -29,18 +26,13 @@ pgc.setup(function(err, pg) {
   if (err) {
     throw new Error(err)
   }
-  deleteAllExistingCountries(pg, function(deleteErr, results) {
-    if (deleteErr) {
-      throw new Error(deleteErr)
-    }
-    appannie.countryCodes(require('request'), function(countries) {
-      var funcs = countries.map(function (country) {
-        return buildCountryInserter(pg, country);
-      })
-      async.series(funcs, function (asyncErr, results) {
-        console.log('Country code / names load complete')
-        pg.end()
-      })
+  appannie.countryCodes(require('request'), function(countries) {
+    var funcs = countries.map(function (country) {
+      return buildCountryInserter(pg, country);
+    })
+    async.series(funcs, function (asyncErr, results) {
+      console.log('Country code / names load complete')
+      pg.end()
     })
   })
 })
