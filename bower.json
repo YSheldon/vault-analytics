@@ -19,6 +19,7 @@
     "Chart.js": "~2.4.0",
     "underscore": "~1.8.3",
     "grapnel": "~0.6.3",
-    "numeral": "^1.5.3"
+    "numeral": "^1.5.3",
+    "moment": "^2.18.1"
   }
 }

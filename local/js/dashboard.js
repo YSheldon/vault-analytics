@@ -496,7 +496,9 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
     var ctrl = rows[x]
     var ctrlClass = ''
     var grandTotalAccumulator = 0
+    var previousValue, difference, differenceRate, i
     rows.forEach(function(row) {
+      if (!previousValue) previousValue = row.count
       if (row[x] !== ctrl) {
         // The ctrl has broken, we need to change grouping
         if (ctrlClass === 'active') {
@@ -513,10 +515,41 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
       if (row.daily_percentage !== undefined) {
         buf = buf + '<td class="text-right">' + stp(row.daily_percentage / 100) + '</td>'
       }
+      if (opts.growth_rate) {
+        difference = row.count - previousValue
+        differenceRate = (difference / parseFloat(previousValue) * 100).toFixed(1)
+        buf = buf + '<td class="text-right">' + value_func(row, difference) + '<span class="subvalue"> ' + differenceRate + '%</span>' + '</td>'
+      }
       buf = buf + '</tr>'
       table.append(buf)
+      previousValue = row.count
       grandTotalAccumulator += row.count
     })
+
+    if (opts.growth_rate) {
+      averageGrowthRate = Math.pow(rows[rows.length - 1].count / rows[0].count, 1 / rows.length) - 1
+      averageGrowthRateDesc = "Math.pow(" + rows[rows.length - 1].count + "/" + rows[0].count + ", 1 / " + rows.length + ") - 1"
+      console.log(averageGrowthRate)
+      table.append(tr([
+        td(),
+        td(),
+        td(),
+        td("Average monthly growth rate " + (averageGrowthRate * 100).toFixed(1) + '%<br><span class="subvalue">' + averageGrowthRateDesc + '</span>', 'right')
+      ]))
+
+      table.append(tr([
+        td("Forward projections based on " + (averageGrowthRate * 100).toFixed(1) + "% monthly growth rate"),
+        td(st(rows[rows.length - 1].count))
+      ]))
+
+      for (i = 1; i < 13; i++) {
+        console.log(i, moment(rows[rows.length - 1].x), rows[rows.length - 1])
+        table.append(tr([
+          td(moment(rows[rows.length - 1].ymd).add(i, 'months').format('MMMM YYYY')),
+          td(st(rows[rows.length - 1].count * Math.pow(1 + averageGrowthRate, i)))
+        ]))
+      }
+    }
 
     // Show grand total line if option present
     if (opts.showGrandTotal) {
@@ -588,6 +621,8 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
 
 // Data type success handlers
 var usagePlatformHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { colourBy: 'label' })
+
+var aggMAUHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { colourBy: 'label', growth_rate: true })
 
 var usageVersionHandler = buildSuccessHandler('ymd', 'version', 'Date', 'Version', { colourBy: 'index' })
 
@@ -680,7 +715,7 @@ var MAUPlatformRetriever = function() {
 
 var MAUAggPlatformRetriever = function() {
   $.ajax('/api/1/mau?' + standardParams(), {
-    success: usagePlatformHandler
+    success: aggMAUHandler
   })
 }
 
