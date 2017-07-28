@@ -42,7 +42,7 @@ function resourcesReady (err, resources) {
     console.log(dump)
 
     // Publish message
-    amqpc.send(dump, resources.ch)
+    amqpc.sendToVersionQueue(dump, resources.ch, dump.ver)
 
     // We need to wait for the message to publish
     setTimeout(function () {

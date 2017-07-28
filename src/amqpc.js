@@ -39,3 +39,13 @@ export function send (msg, ch) {
     { persistent: true }
   )
 }
+
+export function sendToVersionQueue (msg, ch, version) {
+  const queueName = MQ_QUEUE + ':' + version
+  console.log(`Message sent to '${queueName}'`)
+  ch.sendToQueue(
+    queueName,
+    Buffer(JSON.stringify(msg)),
+    { persistent: true }
+  )
+}
