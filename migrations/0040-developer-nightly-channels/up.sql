@@ -32,4 +32,3 @@ ALTER TABLE dw.fc_fastly_calendar_month_usage DROP CONSTRAINT valid_channels;
 ALTER TABLE dw.fc_fastly_calendar_month_usage ADD CONSTRAINT valid_channels_fk FOREIGN KEY (channel) REFERENCES dtl.channels(channel);
 ALTER TABLE dw.fc_daily_telemetry DROP CONSTRAINT valid_channel;
 ALTER TABLE dw.fc_daily_telemetry ADD CONSTRAINT valid_channels_fk FOREIGN KEY (channel) REFERENCES dtl.channels(channel);
---migrations/0035-telemetry/up.sql:ALTER TABLE dw.fc_daily_telemetry ADD CONSTRAINT valid_channel CHECK ( channel IN ( 'dev', 'beta', 'stable' ) );
