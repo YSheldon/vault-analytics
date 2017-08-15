@@ -5,9 +5,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /*
-
   Read and send message to crash reporting parser
-
 */
 
 const async = require('async')
@@ -15,8 +13,15 @@ const async = require('async')
 const pgc = require('../dist/pgc')
 const amqpc = require('../dist/amqpc')
 
-// Retrieve id from argument list
-var id = process.argv[2]
+// Argument parsing
+var args = require('yargs')
+    .demand(['id'])
+    .default('legacy', false)
+    .describe('id', 'crash report id')
+    .describe('legacy', 'send message to legacy queue')
+    .argv
+
+var id = args.id
 if (!id) {
   throw new Error("id must be first argument")
 }
@@ -42,7 +47,11 @@ function resourcesReady (err, resources) {
     console.log(dump)
 
     // Publish message
-    amqpc.sendToVersionQueue(dump, resources.ch, dump.ver)
+    if (args.legacy) {
+      amqpc.send(dump, resources.ch)
+    } else {
+      amqpc.sendToVersionQueue(dump, resources.ch, dump.ver)
+    }
 
     // We need to wait for the message to publish
     setTimeout(function () {
