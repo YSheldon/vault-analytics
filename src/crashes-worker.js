@@ -11,24 +11,10 @@ const amqpc = require('../dist/amqpc')
 
 const mini = require('../dist/mini')
 
-// ElasticSearch
-const ES_INDEX = process.env.ES_INDEX || 'crashes'
-const ES_TYPE = process.env.ES_TYPE || 'crash'
-
 // This is triggered when connections to all resources are established
 const resourcesReady = function (asyncError, resources) {
   if (asyncError) {
     throw new Error(asyncError.toString())
-  }
-
-  // Write crash report meta data to Elastic Search (Kibana)
-  const writeToElasticSearch = function (id, contents, cb) {
-    resources.es.create({
-      index: ES_INDEX,
-      type: ES_TYPE,
-      id: id,
-      body: contents
-    }, cb)
   }
 
   // Write crash report meta data to Postgres
@@ -38,6 +24,20 @@ const resourcesReady = function (asyncError, resources) {
       [id, JSON.stringify(contents)],
       cb
     )
+  }
+
+  const combineJavascriptInfoSections = (contents) => {
+    var n = 1
+    var buffer = ""
+    if (contents['javascript-info-' + n]) {
+      while (contents['javascript-info-' + n]) {
+        buffer += contents['javascript-info-' + n]
+        delete contents['javascript-info-' + n]
+        n += 1
+      }
+      contents['javascript-info'] = JSON.parse(buffer)
+    }
+    return contents
   }
 
   // Build a function capable of retrieving the crash report,
@@ -52,6 +52,9 @@ const resourcesReady = function (asyncError, resources) {
 
         // install the parser minidump metadata into the crash report
         msgContents.metadata = metadata
+
+        // combine javascript-info-X sections
+        msgContents = combineJavascriptInfoSections(msgContents)
 
         // Fill in missing info for crashes that come in without version / platform info (macOS generally)
         if (!msgContents._version) {
@@ -75,27 +78,14 @@ const resourcesReady = function (asyncError, resources) {
             }
             console.log(`[${msgContents._id}] written to Postgres`)
 
-            // Write the record to Elastic Search
-            writeToElasticSearch(
-              msgContents._id,
-              // We need to store the crash in a 'crash' attribute because
-              // the _ver field collides with ElasticSearch
-              { crash: msgContents },
-              function (esErr, response) {
-                if (esErr) {
-                  console.log(esErr)
-                }
-                console.log(`[${msgContents._id}] indexed in ElasticSearch`)
-                // done, ack the message and callback
-                mini.writeParsedCrashToS3(msgContents._id, crashReport, function (s3WriteError) {
-                  if (s3WriteError) {
-                    console.log(s3WriteError)
-                  }
-                  resources.ch.ack(msg)
-                  cb(null)
-                })
+            mini.writeParsedCrashToS3(msgContents._id, crashReport, function (s3WriteError) {
+              if (s3WriteError) {
+                console.log(s3WriteError)
               }
-            )
+              resources.ch.ack(msg)
+              cb(null)
+            })
+
           })
       })
     }

@@ -1488,6 +1488,19 @@ router.get('crash/:id', function(req) {
     })
   }
 
+  function objectToTable (obj) {
+    var buffer = "<table class='table table-striped'>"
+    _.each(_.keys(obj).sort(), function (k) {
+      if (!_.isObject(obj[k])) {
+        buffer += '<tr><td>' + k + '</td><td>' + obj[k] + '</td></tr>'
+      } else {
+        buffer+= '<tr><td>' + k + '</td><td>' + objectToTable(obj[k]) + '</td></tr>'
+      }
+    })
+    buffer += "</table>"
+    return buffer
+  }
+
   $.ajax('/api/1/crash_report?id=' + req.params.id, {
     success: function(crash) {
       $("#controls").hide()
@@ -1500,6 +1513,8 @@ router.get('crash/:id', function(req) {
       _.each(_.keys(info).sort(), function (k) {
         if (!_.isObject(info[k])) {
           table.append('<tr><td>' + k + '</td><td>' + info[k] + '</td></tr>')
+        } else {
+          table.append('<tr><td>' + k + '</td><td>' + objectToTable(info[k]) + '</td></tr>')
         }
       })
       $('#crash-detail-stack').html(crash.crash_report)
