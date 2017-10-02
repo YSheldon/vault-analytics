@@ -8,7 +8,7 @@ const moment = require('moment')
 const allPlatforms = ['osx', 'winx64', 'winia32', 'ios', 'android', 'unknown', 'linux', 'darwin', 'androidbrowser']
 exports.allPlatforms = allPlatforms
 
-const allChannels = ['dev', 'beta', 'stable']
+const allChannels = ['dev', 'beta', 'stable', 'nightly', 'developer']
 exports.allChannels = allChannels
 
 exports.channelPostgresArray = (channelFilter) => {

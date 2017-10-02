@@ -13,6 +13,9 @@ var model = require('../dist/model')
 var reporter = require('../dist/reporter')
 var pgc = require('../dist/pgc')
 var mongoc = require('../dist/mongoc')
+var common = require('../dist/api/common')
+
+var channels = _.object(common.allChannels.map((c) => { return [c, {}] }))
 
 console.log('Update daily crash totals for laptop')
 
@@ -26,11 +29,14 @@ function resourcesReady (setupError, resources) {
     resources.mg.close()
   }
 
-  var resultsHandler = function(err, results) {
+  var resultsHandler = function (err, results) {
     if (err) throw err
 
     // only attempt to insert rows with valid version formats
     results = results.filter((row) => { return row._id.version.match(/^\d+\.\d+\.\d+$/) })
+
+    // only keep rows with valid channel identifiers
+    results = results.filter((row) => { return !!channels[row._id.channel] })
 
     // Build funcs to execute
     var funcs = _.map(results, function(row) {
