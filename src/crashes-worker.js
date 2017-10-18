@@ -61,7 +61,7 @@ const resourcesReady = function (asyncError, resources) {
           msgContents._version = '0.0.0'
         }
         if (!msgContents.platform) {
-          if (msgContents.metadata.operating_system.match(/^Mac/)) {
+          if (msgContents.metadata.operating_system && msgContents.metadata.operating_system.match(/^Mac/)) {
             msgContents.platform = 'darwin'
           } else {
             msgContents.platform = 'unknown'
