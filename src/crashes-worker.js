@@ -35,7 +35,13 @@ const resourcesReady = function (asyncError, resources) {
         delete contents['javascript-info-' + n]
         n += 1
       }
-      contents['javascript-info'] = JSON.parse(buffer)
+      try {
+        contents['javascript-info'] = JSON.parse(buffer)
+      } catch (e) {
+        contents['javascript-info'] = {
+          'raw': buffer
+        }
+      }
     }
     return contents
   }

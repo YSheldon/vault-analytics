@@ -28,7 +28,6 @@ var resourcesReady = function(asyncError, resources) {
     resources.mg.close()
   }
 
-  console.log('Connected to Mongo')
   // Retrieve the daily active user stats
   retriever.dailyActiveiOSUsersFullGrouped(resources.mg, [], function(err, results) {
     // set defaults if woi and ref not set

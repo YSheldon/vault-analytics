@@ -28,14 +28,12 @@ var resourcesReady = function(asyncError, resources) {
     resources.mg.close()
   }
 
-  console.log('Connected to Mongo')
   // Retrieve the daily active user stats
   retriever.dailyActiveAndroidUsersFullGrouped(resources.mg, [], function(err, results) {
     // disambiguate between Link Bubble and tabbed browser
     results.forEach(function (result) {
       result._id.platform = 'androidbrowser'
     })
-
     // filter out wrong version formats
     results = results.filter(function (result) {
       return result._id.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))
