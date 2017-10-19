@@ -8,7 +8,6 @@ exports.usageUpserter = function (client, row) {
 
 exports.usageiOSUpserter = function (client, row) {
   return function (cb) {
-    console.log(row)
     client.query('INSERT INTO dw.fc_ios_usage (ymd, platform, version, first_time, channel, woi, ref, total) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (ymd, platform, version, first_time, channel, woi, ref) DO UPDATE SET total = $8', [row._id.ymd, row._id.platform, row._id.version, row._id.first_time, row._id.channel, row._id.woi, row._id.ref, row.count], (err, result) => {
       cb(err)
     })
