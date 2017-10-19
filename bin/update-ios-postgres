@@ -4,33 +4,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+var async = require('async')
+var _ = require('underscore')
+var fs = require('fs')
+var path = require('path')
+
 var mongoc = require('../dist/mongoc')
-var pgc = require('../dist/pgc')
 var retriever = require('../dist/retriever')
 var model = require('../dist/model')
 var reporter = require('../dist/reporter')
-
-var async = require('async')
-var _ = require('underscore')
-var path = require('path')
-
-var args = require('yargs')
-    .default('collection', 'usage')
-    .argv
-
-var validCollections = ['usage', 'android_usage', 'ios_usage']
-if (validCollections.indexOf(args.collection) === -1) {
-  console.log('Invalid collection ' + args.collection);
-  process.exit(1)
-}
-
-var upsertMaker = model.usageMonthlyUpserter
-if (args.collection === 'ios_usage') {
-  upsertMaker = model.usageiOSMonthlyUpserter
-}
+var pgc = require('../dist/pgc')
 
 var jobName = path.basename(__filename)
 var runInfo = reporter.startup(jobName)
+
+console.log('Update daily totals for iOS browser - ' + jobName)
 
 // This is triggered when all resources have valid connections
 var resourcesReady = function(asyncError, resources) {
@@ -40,21 +28,10 @@ var resourcesReady = function(asyncError, resources) {
     resources.mg.close()
   }
 
-  console.log('Update monthly totals for ' + args.collection)
-  var resultsHandler = function(err, results) {
-    if (err) {
-      throw new Error(err)
-    }
-
-    console.log("Updating " + results.length + " rows")
-
-    // disambiguate between Link Bubble and tabbed browser
-    if (args.collection === 'android_usage') {
-      results.forEach(function (result) {
-        result._id.platform = 'androidbrowser'
-      })
-    }
-
+  console.log('Connected to Mongo')
+  // Retrieve the daily active user stats
+  retriever.dailyActiveiOSUsersFullGrouped(resources.mg, [], function(err, results) {
+    // set defaults if woi and ref not set
     results.forEach((result) => {
       result._id.woi = result._id.woi || '2016-01-04'
       result._id.ref = result._id.ref || 'none'
@@ -67,8 +44,11 @@ var resourcesReady = function(asyncError, resources) {
 
     // Build funcs to execute
     var funcs = _.map(results, function(row) {
-      return upsertMaker(resources.pg, row)
+      return model.usageiOSUpserter(resources.pg, row)
     })
+
+    console.log('Retrieved results from Mongo')
+    console.log('Updating ' + results.length + ' rows in Postgres')
 
     // Insert rows
     async.series(funcs, function(err, results) {
@@ -78,9 +58,7 @@ var resourcesReady = function(asyncError, resources) {
       // Report the results of the job run
       reporter.shutdown(runInfo, resources.pg, cleanup)
     })
-  }
-  // retrieve the monthly user count and update Postgres
-  retriever.monthlyUsersByDay(resources.mg, resultsHandler, args.collection)
+  })
 }
 
 // Setup and run

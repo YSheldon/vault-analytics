@@ -6,9 +6,26 @@ exports.usageUpserter = function (client, row) {
   }
 }
 
+exports.usageiOSUpserter = function (client, row) {
+  return function (cb) {
+    console.log(row)
+    client.query('INSERT INTO dw.fc_ios_usage (ymd, platform, version, first_time, channel, woi, ref, total) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (ymd, platform, version, first_time, channel, woi, ref) DO UPDATE SET total = $8', [row._id.ymd, row._id.platform, row._id.version, row._id.first_time, row._id.channel, row._id.woi, row._id.ref, row.count], (err, result) => {
+      cb(err)
+    })
+  }
+}
+
 exports.usageMonthlyUpserter = function (client, row) {
   return function (cb) {
     client.query('INSERT INTO dw.fc_usage_month (ymd, platform, version, channel, total) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (ymd, platform, version, channel) DO UPDATE SET total = $5', [row._id.ymd, row._id.platform, row._id.version, row._id.channel, row.count], (err, result) => {
+      cb(err)
+    })
+  }
+}
+
+exports.usageiOSMonthlyUpserter = function (client, row) {
+  return function (cb) {
+    client.query('INSERT INTO dw.fc_ios_usage_month (ymd, platform, version, channel, woi, ref, total) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (ymd, platform, version, channel, woi, ref) DO UPDATE SET total = $7', [row._id.ymd, row._id.platform, row._id.version, row._id.channel, row._id.woi, row._id.ref, row.count], (err, result) => {
       cb(err)
     })
   }
