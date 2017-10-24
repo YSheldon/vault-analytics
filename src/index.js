@@ -18,6 +18,7 @@ let stats = require('./api/stats')
 let crashes = require('./api/crashes')
 let search = require('./api/search')
 let eyeshade = require('./api/eyeshade')
+let bat_eyeshade = require('./api/bat_eyeshade')
 let publishers = require('./api/publishers')
 let telemetry = require('./api/telemetry')
 
@@ -56,7 +57,7 @@ let kickoff = (err, connections) => {
   })
 
   // Setup the APIs
-  _.each([stats, jobs, crashes, search, eyeshade, publishers, telemetry], (api) => { api.setup(server, connections.pg, connections.mg) })
+  _.each([stats, jobs, crashes, search, eyeshade, bat_eyeshade, publishers, telemetry], (api) => { api.setup(server, connections.pg, connections.mg) })
 
   // Setup the UI for the dashboard
   ui.setup(server)

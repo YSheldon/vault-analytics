@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+var request = require('request')
+var path = require('path')
+
+var pg = require('pg')
+
+console.log('Update BAT quotes')
+
+// This is triggered when all resources have valid connections
+async function main () {
+  var db = await pg.connect(process.env.DATABASE_URL)
+
+  request('https://api.coinmarketcap.com/v1/ticker/basic-attention-token', async function(err, response) {
+    var quote = JSON.parse(response.body)
+
+    await db.query('INSERT INTO dw.bat_quotes (currency_code, quote) VALUES ($1, $2) ON CONFLICT (currency_code) DO UPDATE SET quote = $2', ['USD', quote[0].price_usd])
+    db.end()
+  })
+}
+
+main()

@@ -181,49 +181,63 @@ var overviewMonthAveragesHandler = function (rows) {
   tblBody.html(buf)
 }
 
-var overviewHandler = function (rows, overview) {
+var overviewHandler = function (rows, overview, bat_overview) {
 
   var overviewTable = $("#overview-ledger-table tbody")
   overviewTable.empty()
 
   overviewTable.append(tr([
+    td(""),
+    th('BTC', "right"),
+    th('BAT', "right"),
+    td()
+  ]))
+  overviewTable.append(tr([
     td("Wallets"),
     td(st(overview.wallets), "right"),
+    td(st(bat_overview.wallets), "right"),
     td()
   ]))
   overviewTable.append(tr([
     td("Funded wallets"),
     td(st(overview.funded), "right"),
+    td(st(bat_overview.funded), "right"),
     td()
   ]))
   overviewTable.append(tr([
     td("Percentage of wallets funded"),
     td(numeral(overview.funded / overview.wallets).format('0.0%'), "right"),
+    td(numeral(bat_overview.funded / bat_overview.wallets).format('0.0%'), "right"),
     td()
   ]))
   overviewTable.append(tr([
-    td("USD / 1 BTC"),
-    td(std(overview.btc_usd), "right"),
+    td("USD / 1 Token"),
+    td(round(overview.btc_usd, 3), "right"),
+    td(round(bat_overview.bat_usd, 3), "right"),
     td('$ USD')
   ]))
   overviewTable.append(tr([
     td("Total balance of funded wallets"),
     td(round(overview.balance / 100000000, 3), "right"),
-    td('<i class="fa fa-btc" aria-hidden="true"></i>')
+    td(round(bat_overview.balance, 3), "right"),
+    td('tokens')
   ]))
   overviewTable.append(tr([
     td(),
     td(std(overview.balance / 100000000 * overview.btc_usd), "right"),
+    td(std(bat_overview.balance * bat_overview.bat_usd), "right"),
     td('$ USD')
   ]))
   overviewTable.append(tr([
     td("Average balance of funded wallets"),
     td(round((overview.balance / overview.funded) / 100000000, 6), "right"),
-    td('<i class="fa fa-btc" aria-hidden="true"></i>')
+    td(round((bat_overview.balance / bat_overview.funded), 6), "right"),
+    td('tokens')
   ]))
   overviewTable.append(tr([
     td(),
     td(std((overview.balance / overview.funded) / 100000000 * overview.btc_usd), "right"),
+    td(std((bat_overview.balance / bat_overview.funded) * bat_overview.bat_usd), "right"),
     td('$ USD')
   ]))
 
@@ -857,7 +871,11 @@ var overviewRetriever = function () {
     success: function(rows) {
       $.ajax('/api/1/ledger_overview', {
         success: function(overview) {
-          overviewHandler(rows, overview)
+          $.ajax('/api/1/bat/ledger_overview', {
+            success: function(bat_overview) {
+              overviewHandler(rows, overview, bat_overview)
+            }
+          })
         }
       })
     }

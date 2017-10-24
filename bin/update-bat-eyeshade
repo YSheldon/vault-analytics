@@ -1,0 +1,94 @@
+#!/usr/bin/env node
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+var async = require('async')
+var _ = require('underscore')
+var path = require('path')
+
+// Set the runtime Mongo URL to eyeshade
+process.env.MONGOLAB_URI = process.env.BAT_EYESHADE_URI
+
+var mongoc = require('../dist/mongoc')
+var pgc = require('../dist/pgc')
+var eyeshade = require('../dist/bat_eyeshade')
+var reporter = require('../dist/reporter')
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
+
+console.log('Update eyeshade wallet count by day - ' + jobName)
+
+const QUERY = `
+INSERT INTO dtl.bat_eyeshade_wallets (id, created_ts, created, updated_ts, updated, financial_balance, financial_spendable, financial_confirmed, financial_unconfirmed)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (id) DO UPDATE SET
+created_ts = $2,
+created = $3,
+updated_ts = $4,
+updated = $5,
+financial_balance = $6,
+financial_spendable = $7,
+financial_confirmed = $8,
+financial_unconfirmed = $9
+`
+
+// Build function references to upsert daily stats
+var buildEyeshadeWalletsUpserter = function (pg, record) {
+  return function (cb) {
+    var params = [
+      record.id,
+      record.created_ts,
+      record.created,
+      record.updated_ts,
+      record.updated,
+      record.financial_balance.toString(),
+      record.financial_spendable.toString(),
+      record.financial_confirmed.toString(),
+      record.financial_unconfirmed.toString()
+    ]
+    pg.query(QUERY, params, cb)
+  }
+}
+
+var updateMaterializedViews = function (pg, cb) {
+  pg.query('REFRESH MATERIALIZED VIEW dw.fc_bat_wallets_mv', [], cb)
+}
+
+// This is triggered when all resources have valid connections
+var resourcesReady = function(asyncError, resources) {
+  var cleanup = function () {
+    // Close connections to Postgres and Mongo
+    resources.pg.end()
+    resources.mg.close()
+  }
+
+  eyeshade.wallets(resources.mg, function(err, results) {
+    if (err) {
+      console.log(err)
+    }
+
+    var dayFuncs = _.map(results, function (record) {
+      return buildEyeshadeWalletsUpserter(resources.pg, record)
+    })
+
+    // Upsert rows
+    async.series(dayFuncs, function(err, results) {
+      if (err) {
+        throw new Error(err)
+      }
+      updateMaterializedViews(resources.pg, function(err, results) {
+        // Report the results of the job run
+        reporter.shutdown(runInfo, resources.pg, cleanup)
+      })
+    })
+  })
+}
+
+// Setup and run
+async.parallel({
+  pg: pgc.setup,
+  mg: mongoc.setup
+}, resourcesReady)
