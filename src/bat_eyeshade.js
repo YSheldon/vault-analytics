@@ -34,7 +34,6 @@ exports.wallets = (db, cb) => {
       if (item.balances && item.balances.unconfirmed) {
         toReturn.financial_unconfirmed = new BigNumber(item.balances.unconfirmed.toString()).dividedBy(1e+18)
       }
-      console.log(toReturn)
       return toReturn
     })
     cb(err, returnItems)
