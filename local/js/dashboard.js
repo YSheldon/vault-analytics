@@ -58,6 +58,7 @@ var channelKeys = _.keys(channels)
 
 var reversePlatforms = _.object(_.map(platforms, function(platform) { return [platform.label, platform] }))
 
+
 var round = function (x, n) {
   n = n || 0
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
@@ -110,6 +111,11 @@ var st1 = function (num) {
   return numeral(num).format('0,0.0')
 }
 
+// standard number format i.e. 123,456.7
+var st3 = function (num) {
+  return numeral(num).format('0,0.000')
+}
+
 // standard percentage form i.e. 45.3%
 var stp = function (num) {
   return numeral(num).format('0.0%')
@@ -117,164 +123,7 @@ var stp = function (num) {
 
 var b = function(text) { return '<strong>' + text + "</strong>" }
 
-
-var overviewMonthAveragesHandler = function (rows) {
-  var tblHead = $("#monthly-averages-table thead")
-  var tblBody = $("#monthly-averages-table tbody")
-
-  var months = _.uniq(_.pluck(rows, 'ymd')).map(function (ymd) { return ymd.substring(0, 7) })
-  var buf = "<tr><th></th>" + months.map(function (ymd) { return th(ymd, 'right') }).join('') + "</tr>"
-  tblHead.html(buf)
-
-  var platforms = _.uniq(_.pluck(rows, 'platform')).sort()
-  var platformStats = _.groupBy(rows, function (row) { return row.platform } )
-  var platformCrossTab = _.groupBy(rows, function (row) { return row.ymd.substring(0, 7) + '|' + row.platform })
-
-  var formatPlatformMonth = function (platformMonth, last) {
-    var b = ''
-    var diffs
-
-    var fdiff = function (diffs, k) {
-      var cls
-      if (diffs) {
-        cls = 'ltz'
-        if (diffs[k + '_per'] > 0) cls = 'gtz'
-        return ' <span class="' + cls + '">' + stp(diffs[k + '_per']) + '</span>'
-      } else {
-        return ''
-      }
-    }
-
-    if (last) {
-      diffs = {
-        mau_per: window.STATS.COMMON.safeDivide(platformMonth.mau - last.mau, platformMonth.mau),
-        dau_per: window.STATS.COMMON.safeDivide(platformMonth.dau - last.dau, platformMonth.dau),
-        first_time_per: window.STATS.COMMON.safeDivide(platformMonth.first_time - last.first_time, platformMonth.first_time)
-      }
-    }
-    b = b + '<div>' + st(platformMonth.mau) + fdiff(diffs, 'mau') + '</div>'
-    b = b + '<div>' + st(platformMonth.dau) + fdiff(diffs, 'dau') + '</div>'
-    b = b + '<div>' + st(platformMonth.first_time) + fdiff(diffs, 'first_time') + '</div>'
-    b = b + '<div>' + std(window.STATS.COMMON.safeDivide(platformMonth.dau, platformMonth.mau)) + '</div>'
-    b = b + '<div>' + st1(window.STATS.COMMON.safeDivide(platformMonth.mau, platformMonth.first_time)) + '</div>'
-    return b
-  }
-
-  var buf = ''
-  platforms.forEach(function (platformName) {
-    var platformData = platformStats[platformName]
-    buf = buf + '<tr>'
-    buf = buf + td(b(platformName))
-    var last = null
-    months.forEach(function (month) {
-      var monthPlatformInfo = platformCrossTab[month + '|' + platformName]
-      if (monthPlatformInfo) {
-        monthPlatformInfo = monthPlatformInfo[0]
-        buf = buf + td(formatPlatformMonth(monthPlatformInfo, last), 'right')
-        last = monthPlatformInfo
-      } else {
-        buf = buf + td('')
-      }
-    })
-    buf = buf + '</tr>'
-  })
-  tblBody.html(buf)
-}
-
-var overviewHandler = function (rows, overview, bat_overview) {
-
-  var overviewTable = $("#overview-ledger-table tbody")
-  overviewTable.empty()
-
-  overviewTable.append(tr([
-    td(""),
-    th('BTC', "right"),
-    th('BAT', "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("Wallets"),
-    td(st(overview.wallets), "right"),
-    td(st(bat_overview.wallets), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("Funded wallets"),
-    td(st(overview.funded), "right"),
-    td(st(bat_overview.funded), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("Percentage of wallets funded"),
-    td(numeral(overview.funded / overview.wallets).format('0.0%'), "right"),
-    td(numeral(bat_overview.funded / bat_overview.wallets).format('0.0%'), "right"),
-    td()
-  ]))
-  overviewTable.append(tr([
-    td("USD / 1 Token"),
-    td(round(overview.btc_usd, 3), "right"),
-    td(round(bat_overview.bat_usd, 3), "right"),
-    td('$ USD')
-  ]))
-  overviewTable.append(tr([
-    td("Total balance of funded wallets"),
-    td(round(overview.balance / 100000000, 3), "right"),
-    td(round(bat_overview.balance, 3), "right"),
-    td('tokens')
-  ]))
-  overviewTable.append(tr([
-    td(),
-    td(std(overview.balance / 100000000 * overview.btc_usd), "right"),
-    td(std(bat_overview.balance * bat_overview.bat_usd), "right"),
-    td('$ USD')
-  ]))
-  overviewTable.append(tr([
-    td("Average balance of funded wallets"),
-    td(round((overview.balance / overview.funded) / 100000000, 6), "right"),
-    td(round((bat_overview.balance / bat_overview.funded), 6), "right"),
-    td('tokens')
-  ]))
-  overviewTable.append(tr([
-    td(),
-    td(std((overview.balance / overview.funded) / 100000000 * overview.btc_usd), "right"),
-    td(std((bat_overview.balance / bat_overview.funded) * bat_overview.bat_usd), "right"),
-    td('$ USD')
-  ]))
-
-  var groups = _.groupBy(rows, function (row) { return row.mobile })
-  var desktop = groups[false].sort(function(a, b) { return b.count - a.count })
-  var mobile = groups[true].sort(function(a, b) { return b.count - a.count })
-
-  var sumOfAll = _.reduce(rows, function (memo, row) { return memo + row.count }, 0)
-  var sumOfDesktop = _.reduce(desktop, function (memo, row) { return memo + row.count }, 0)
-  var table = $("#overview-first-run-table-desktop tbody")
-  table.empty()
-  _.each(desktop, function (row) {
-    var buf = '<tr>'
-    buf = buf + td(row.platform, 'left')
-    buf = buf + td(st(row.count), 'right')
-    buf = buf + td(numeral(row.count / sumOfDesktop).format('0.0%'), 'right')
-    buf = buf + td(numeral(row.count / sumOfAll).format('0.0%'), 'right')
-    buf = buf + "</tr>"
-    table.append(buf)
-  })
-  table.append(tr([td(), td(b(st(sumOfDesktop)), 'right'), td(b(numeral(sumOfDesktop / sumOfAll).format('0.0%')), 'right'), td()]))
-
-  var sumOfMobile = _.reduce(mobile, function (memo, row) { return memo + row.count }, 0)
-  table = $("#overview-first-run-table-mobile tbody")
-  table.empty()
-  _.each(mobile, function (row) {
-    var buf = '<tr>'
-    buf = buf + td(row.platform, 'left')
-    buf = buf + td(st(row.count), 'right')
-    buf = buf + td(numeral(row.count / sumOfDesktop).format('0.0%'), 'right')
-    buf = buf + td(numeral(row.count / sumOfAll).format('0.0%'), 'right')
-    buf = buf + "</tr>"
-    table.append(buf)
-  })
-    table.append(tr([td(), td(b(st(sumOfMobile)), 'right'), td(b(numeral(sumOfMobile / sumOfAll).format('0.0%')), 'right'), td()]))
-  table.append(tr([td(), td(b(st(sumOfAll)), 'right'), td(), td()]))
-}
+var builders = { round, td, ptd, th, tr, st, td, st1, st3, stp, b, std }
 
 var crashVersionHandler = function(rows) {
   var s = $('#crash-ratio-versions')
@@ -852,34 +701,21 @@ var crashesVersionRetriever = function() {
   })
 }
 
-var overviewRetriever = function () {
-  $.ajax('/api/1/monthly_average_stats_platform', {
-    success: overviewMonthAveragesHandler
-  })
+// Retrieve overview stats and dispatch UI build
+var overviewRetriever = async function () {
+  var platformStats = await $.ajax('/api/1/monthly_average_stats_platform')
+  window.OVERVIEW.monthAveragesHandler(platformStats, builders)
 
-  $.ajax('/api/1/publishers/overview', {
-    success: function (overview) {
-      $.ajax('/api/1/publishers/overview/bucketed', {
-        success: function (buckets) {
-          window.STATS.PUB.overviewPublisherHandler(overview, buckets)
-        }
-      })
-    }
-  })
+  var publishersOverview = await $.ajax('/api/1/publishers/overview')
+  var publishersBucketed = await $.ajax('/api/1/publishers/overview/bucketed')
+  window.STATS.PUB.overviewPublisherHandler(publishersOverview, publishersBucketed)
 
-  $.ajax('/api/1/dau_platform_first_summary', {
-    success: function(rows) {
-      $.ajax('/api/1/ledger_overview', {
-        success: function(overview) {
-          $.ajax('/api/1/bat/ledger_overview', {
-            success: function(bat_overview) {
-              overviewHandler(rows, overview, bat_overview)
-            }
-          })
-        }
-      })
-    }
-  })
+  var btc = await $.ajax('/api/1/ledger_overview')
+  var bat = await $.ajax('/api/1/bat/ledger_overview')
+  window.OVERVIEW.ledger(btc, bat, builders)
+
+  var downloads = await $.ajax('/api/1/dau_platform_first_summary')
+  window.OVERVIEW.firstRun(downloads, builders)
 }
 
 var eyeshadeRetriever = function() {
