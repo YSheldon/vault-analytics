@@ -1435,63 +1435,6 @@ $("#btn-show-today").on('change', function() {
   refreshData()
 })
 
-var linksSearchInputHandler = function (e) {
-  filterLinksOn(this.value)
-}
-
-var filterLinksOn = function (text) {
-  text = (text || '').toLowerCase()
-  if (text) {
-    $(".sidebar li a").each(function (idx, elem) {
-      if (elem.text.toLowerCase().match(new RegExp(text))) {
-        $(elem).closest('li').show('fast')
-      } else {
-        $(elem).closest('li').hide('fast')
-      }
-    })
-  } else {
-    $(".sidebar li a").each(function (idx, elem) {
-      $(elem).closest('li').show('fast')
-    })
-  }
-}
-
-$("#filterMAU").on('click', function (evt) {
-  evt.preventDefault()
-  $("#searchLinks").val('MAU')
-  filterLinksOn('MAU')
-})
-
-$("#filterDAU").on('click', function (evt) {
-  evt.preventDefault()
-  $("#searchLinks").val('DAU')
-  filterLinksOn('DAU')
-})
-
-$("#filterLedger").on('click', function (evt) {
-  evt.preventDefault()
-  $("#searchLinks").val('Ledger')
-  filterLinksOn('Ledger')
-})
-
-$("#filterCrashes").on('click', function (evt) {
-  evt.preventDefault()
-  $("#searchLinks").val('Crash')
-  filterLinksOn('Crash')
-})
-
-$("#filterPublisher").on('click', function (evt) {
-  evt.preventDefault()
-  $("#searchLinks").val('Publisher')
-  filterLinksOn('Publisher')
-})
-
-$("#filterTelemetry").on('click', function (evt) {
-  evt.preventDefault()
-  $("#searchLinks").val('Telemetry')
-  filterLinksOn('Telemetry')
-})
-
 var searchInputHandler = function (e) {
   var q = this.value
   var table = $("#search-results-table tbody")
@@ -1539,16 +1482,9 @@ var searchInputHandler = function (e) {
 
 $("#searchText").on('input', _.debounce(searchInputHandler, 500))
 
-$("#searchLinks").on('input', _.debounce(linksSearchInputHandler, 250))
-
-$("#clearSearchLinks").on('click', function () {
-  $("#searchLinks").val('')
-  filterLinksOn(null)
-  $("#searchLinks").focus()
-})
-
 $("#searchComments").hide()
-$("#searchLinks").focus()
+
+window.SEARCH_LINKS.setup()
 
 $("#monthly-averages-whats-this").on('click', function (e) {
   e.preventDefault()
