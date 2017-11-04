@@ -881,7 +881,8 @@ var overviewRetriever = async function () {
 
   var publishersOverview = await $.ajax('/api/1/publishers/overview')
   var publishersBucketed = await $.ajax('/api/1/publishers/overview/bucketed')
-  window.STATS.PUB.overviewPublisherHandler(publishersOverview, publishersBucketed)
+  var publishers = await $.ajax('/api/1/publishers/details')
+  window.STATS.PUB.overviewPublisherHandler(publishersOverview, publishersBucketed, publishers)
 
   var btc = await $.ajax('/api/1/ledger_overview')
   var bat = await $.ajax('/api/1/bat/ledger_overview')

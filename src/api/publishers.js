@@ -50,6 +50,10 @@ FROM dw.fc_daily_publishers
 WHERE ymd >= current_date - CAST('${days} days' as INTERVAL)`
 }).join(' UNION ') + ') T ORDER BY T.days ASC'
 
+const PUBLISHERS_DETAILS = `
+SELECT * FROM dtl.publishers ORDER BY alexa_rank ASC
+`
+
 // Endpoint definitions
 exports.setup = (server, client, mongo) => {
   // Publishers overview
@@ -105,6 +109,19 @@ exports.setup = (server, client, mongo) => {
           return row
         })
         reply(rows)
+      },
+      emptyParamsBuilder
+    )
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/publishers/details',
+    handler: common.buildQueryReponseHandler(
+      client,
+      PUBLISHERS_DETAILS,
+      (reply, results, request) => {
+        reply(results.rows)
       },
       emptyParamsBuilder
     )

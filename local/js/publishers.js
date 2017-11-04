@@ -1,5 +1,22 @@
 (function () {
-  var overviewPublisherHandler = function (overview, buckets) {
+  var cachedPublishers
+  var overviewPublisherHandlerDetails = function (publishers=[]) {
+    var i, publisher, createdWhen
+    var details = $("#details-publishers-table tbody")
+    if (!cachedPublishers) cachedPublishers = publishers
+    for (i = details.children().length; i < cachedPublishers.length; i++) {
+      publisher = cachedPublishers[i]
+      createdWhen = moment(publisher.created_at)
+      details.append(tr([
+        td("<a href='https://" + publisher.publisher + "'>" + publisher.publisher + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
+        td(publisher.alexa_rank || '-'),
+        td(publisher.verified ? 'Yes' : '-'),
+        td(publisher.authorized ? 'Yes' : '-')
+      ]))
+    }
+  }
+
+  var overviewPublisherHandler = function (overview, buckets, publishers=[]) {
     var overviewTable = $("#overview-publishers-table tbody")
     overviewTable.empty()
 
@@ -19,6 +36,9 @@
       td("IRS Forms"),
       ptd(st(overview.irs), numeral(overview.irs / overview.total).format('0.0%'), "left")
     ]))
+
+    // insert an initial set of top publishers
+    overviewPublisherHandlerDetails(publishers)
 
     var bucketTable = $("#overview-publishers-bucketed-table tbody")
     bucketTable.empty()

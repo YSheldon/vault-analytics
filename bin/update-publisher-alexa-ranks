@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+
+const pg = require('pg')
+
+async function retrieveAlexaRanking (url) {
+  return new Promise((resolve, reject) => {
+    // TODO - make actual call
+    resolve(parseInt(Math.random() * 10000))
+  })
+}
+
+async function main () {
+  var i, ranking, publishers, db
+  try {
+    db = await pg.connect(process.env.DATABASE_URL)
+    if (!db) throw "Could not connect to database at " + process.env.DATABASE_URL
+
+    publishers = (await db.query("SELECT * FROM dtl.publishers WHERE alexa_rank IS NULL", [])).rows
+    for (var i = 0; i < publishers.length; i++) {
+      console.log(`Updating rank for ${publishers[i].publisher} to ${ranking}`)
+      ranking = await retrieveAlexaRanking(publishers[i].publisher)
+      if (ranking) {
+        await db.query("UPDATE dtl.publishers SET alexa_rank = $1 WHERE publisher = $2", [ranking, publishers[i].publisher])
+      }
+    }
+    db.end() 
+  } catch (e) {
+    console.log(e.toString())
+    process.exit(1)
+  }
+}
+
+main()

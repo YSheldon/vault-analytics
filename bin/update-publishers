@@ -15,6 +15,12 @@ var reporter = require('../dist/reporter')
 var jobName = path.basename(__filename)
 var runInfo = reporter.startup(jobName)
 
+const PUBLISHER_URL = process.env.PUBLISHER_URL
+if (!PUBLISHER_URL) {
+  console.log("PUBLISHER_URL required")
+  process.exit(1)
+}
+
 console.log('Update eyeshade publisher counts ' + jobName)
 
 const QUERY = `
@@ -27,14 +33,25 @@ ON CONFLICT (ymd) DO UPDATE SET
   irs = $5
 `
 
+const INSERT_PUBLISHER = `
+INSERT INTO dtl.publishers ( publisher, created, created_at, verified, authorized ) VALUES ( $1, $2, $3, $4, $5 ) ON CONFLICT (publisher) DO UPDATE SET created = $2, created_at = $3, verified = $4, authorized = $5
+`
+
 // This is triggered when all resources have valid connections
-var resourcesReady = function(asyncError, resources) {
+var resourcesReady = async function (asyncError, resources) {
   var cleanup = function () {
     // Close connections to Postgres
     resources.pg.end()
   }
 
-  publishers.all(function (err, ymdRows) {
+  publishers.all(PUBLISHER_URL, async function (err, ymdRows, publishers) {
+    var publisher, i
+    console.log("Inserting or updating publishers")
+    for (i = 0; i < publishers.length; i++) {
+      publisher = publishers[i]
+      console.log(publisher)
+      await resources.pg.query(INSERT_PUBLISHER, [publisher.publisher, publisher.created, publisher.created_at, publisher.verified, publisher.authorized])
+    }
     var funcs = ymdRows.map((row) => {
       return (cb) => {
         resources.pg.query(QUERY, [row.ymd, row.total || 0, row.verified, row.authorized, row.irs], cb)

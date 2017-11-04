@@ -5,6 +5,7 @@
 var _ = require('underscore')
 var request = require('request')
 var ProxyAgent = require('proxy-agent')
+const moment = require('moment')
 
 var agent
 if (!process.env.LOCAL) {
@@ -46,20 +47,39 @@ function summarizePublishers (publishers) {
   return mapped
 }
 
-export function all (done) {
+export function verifiedPublishers (publishers) {
+  return publishers.filter((publisher) => {
+    return publisher.verified
+  }).map((publisher) => {
+    return {
+      publisher: publisher.publisher,
+      verified: publisher.verified,
+      authorized: !!publisher.authorized,
+      created: publisher.created || 0,
+      created_at: moment(publisher.created || 0).format('YYYY-MM-DD')
+    }
+  })
+}
+
+export function all (url, done) {
   var intervalID
   var limit = 40
   var delay = 10000
 
   var token = process.env.EYESHADE_TOKEN
   var options = {
-    uri: "https://eyeshade.brave.com/v2/reports/publishers/status?format=json&summary=true&access_token=" + token,
+    uri: url + "/v2/reports/publishers/status?format=json&summary=true&access_token=" + token,
+    // uri: "https://eyeshade.brave.com/v2/reports/publishers/status?format=json&summary=true&access_token=" + token,
     method: 'GET'
   }
   if (agent) options.agent = agent
-
+  console.log(options)
   request(options, function (err, response, body) {
-    var reportURL, intervalId, results
+    if (err) {
+      console.log(err)
+      process.exit(1)
+    }
+    var reportURL, intervalId, results, publishers
     if (response.statusCode === 200) {
       reportURL = JSON.parse(body).reportURL
       console.log(reportURL)
@@ -74,7 +94,8 @@ export function all (done) {
           if (response.statusCode === 200) {
             clearInterval(intervalID)
             results = summarizePublishers(JSON.parse(body.replace(/[\x00-\x1f]/g, "")))
-            done(null, results)
+            publishers = verifiedPublishers(JSON.parse(body.replace(/[\x00-\x1f]/g, "")))
+            done(null, results, publishers)
           } else {
             limit -= 1
             if (limit === 0) process.exit(1)
