@@ -414,3 +414,83 @@ exports.dailyTelemetry = (db, collection, days, cb) => {
 
   query.toArray(cb)
 }
+
+exports.aggregatedWOI = (db, collection, days=2) => {
+  return new Promise((resolve, reject) => {
+
+    var limit = moment().subtract(days, 'days').format('YYYY-MM-DD')
+    console.log(`Retrieving records on and after ${limit}`)
+
+    var query = db.collection(collection).aggregate([
+      {
+        $match: {
+          year_month_day: { $gte: limit }
+        }
+      },
+      {
+        $match: { daily: true }
+      },
+      {
+        $project: {
+          date: {
+            $add: [ (new Date(0)), '$ts' ]
+          },
+          platform: {
+            $ifNull: [ '$platform', 'unknown' ]
+          },
+          version: {
+            $ifNull: [ '$version', '0.0.0' ]
+          },
+          first_time: {
+            $ifNull: [ '$first', false ]
+          },
+          channel: {
+            $ifNull: [ '$channel', 'dev' ]
+          },
+          ymd: {
+            $ifNull: [ '$year_month_day', '2016-02-10']
+          },
+          woi: {
+            $ifNull: [ '$woi', '2016-01-04' ]
+          },
+          ref: {
+            $ifNull: [ '$ref', 'none' ]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            ymd: '$ymd',
+            platform: '$platform',
+            version: '$version',
+            first_time: '$first_time',
+            channel: '$channel',
+            woi: '$woi',
+            ref: '$ref'
+          },
+          count: {
+            $sum: 1
+          }
+        }
+      },
+      {
+        $sort: {
+          '_id.ymd': -1,
+          '_id.woi': -1,
+          '_id.platform': 1,
+          '_id.version': 1,
+          '_id.first_time': 1,
+          '_id.channel': 1,
+          '_id.ref': 1
+        }
+      }
+    ], { explain: false })
+
+    query.toArray((err, results) => {
+      if (err) reject(err)
+      else return resolve(results)
+    })
+  })
+}
+
