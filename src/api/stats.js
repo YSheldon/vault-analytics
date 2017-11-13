@@ -137,6 +137,40 @@ ORDER BY
   left(ymd::text, 7)
 `
 
+const RETENTION = `
+SELECT
+  TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
+  TO_CHAR(FC.woi, 'YYYY-MM-DD') AS woi,
+  SUM(FC.total) AS count
+FROM dw.fc_retention_woi FC
+WHERE
+  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
+  FC.platform = ANY ($2) AND
+  FC.channel = ANY ($3)
+GROUP BY FC.ymd, FC.woi
+ORDER BY FC.ymd DESC, FC.woi
+`
+
+const RETENTION_MONTH = `
+SELECT
+  moi,
+  month_delta,
+  sum(current) as current,
+  sum(starting) as starting,
+  sum(current) / sum(starting) as retained_percentage
+FROM dw.fc_retention_month_mv FC
+WHERE
+  FC.platform = ANY ($1) AND
+  FC.channel  = ANY ($2) AND
+  FC.ref      = ANY ($3)
+GROUP BY
+  moi,
+  month_delta
+ORDER BY
+  moi,
+  month_delta
+`
+
 const DAU_PLATFORM = `
 SELECT
   TO_CHAR(FC.ymd, 'YYYY-MM-DD') AS ymd,
@@ -395,6 +429,53 @@ exports.setup = (server, client, mongo) => {
           reply(results.rows)
         }
       })
+    }
+  })
+
+  // Retention
+  server.route({
+    method: 'GET',
+    path: '/api/1/retention',
+    handler: function (request, reply) {
+      let days = parseInt(request.query.days || 7, 10) + ' days'
+      let platforms = common.platformPostgresArray(request.query.platformFilter)
+      let channels = common.channelPostgresArray(request.query.channelFilter)
+      client.query(RETENTION, [days, platforms, channels], (err, results) => {
+        if (err) {
+          reply(err.toString()).code(500)
+        } else {
+          results.rows.forEach((row) => common.formatPGRow(row))
+          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+          results.rows.forEach((row) => common.convertPlatformLabels(row))
+          reply(results.rows)
+        }
+      })
+    }
+  })
+
+  // Retention
+  server.route({
+    method: 'GET',
+    path: '/api/1/retention_month',
+    handler: async function (request, reply) {
+      try {
+        let platforms = common.platformPostgresArray(request.query.platformFilter)
+        let channels = common.channelPostgresArray(request.query.channelFilter)
+        let refs = ['none']
+        let rows = (await client.query(RETENTION_MONTH, [platforms, channels, refs])).rows
+        console.log(rows)
+        rows.forEach((row) => common.convertPlatformLabels(row))
+        rows = rows.map((row) => {
+          row.current = parseInt(row.current)
+          row.starting = parseInt(row.starting)
+          row.retained_percentage = parseFloat(row.retained_percentage)
+          row.month_delta = parseInt(row.month_delta)
+          return row
+        })
+        reply(rows)
+      } catch (e) {
+        reply(e.toString()).code(500)
+      }
     }
   })
 

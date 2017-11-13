@@ -152,3 +152,17 @@ body {
     font-size: 65%;
     color: #999;
 }
+
+.retentionCell {
+    text-align: center;
+    font-size: 125%;
+    font-weight: bold;
+}
+
+.quiet {
+  color: #999;
+}
+
+.busy {
+  color: #ff0000;
+}

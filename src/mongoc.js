@@ -15,3 +15,14 @@ export function setup (cb) {
     cb(err, connection)
   })
 }
+
+export function setupConnection () {
+  return new Promise((resolve, reject) => {
+    console.log('Connecting to Mongo at ' + mongoURL)
+    MongoClient.connect(mongoURL, (err, connection) => {
+      if (err) return reject(err)
+      else resolve(connection)
+    })
+  })
+}
+

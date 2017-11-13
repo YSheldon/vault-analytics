@@ -2,7 +2,7 @@ window.STATS = {};
 
 (function () {
   var secondOrder = (d) => {
-    var points = [0]
+    var points = []
     for (var i = 1; i < d.length; i += 1) {
       points.push(d[i] - d[i - 1])
     }

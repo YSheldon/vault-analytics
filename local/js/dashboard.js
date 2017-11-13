@@ -41,7 +41,7 @@ var platforms = {
 var channels = {
   dev: {
     id: 'dev',
-    label: 'Development'
+    label: 'Release'
   },
   beta: {
     id: 'beta',
@@ -57,7 +57,6 @@ var platformKeys = _.keys(platforms)
 var channelKeys = _.keys(channels)
 
 var reversePlatforms = _.object(_.map(platforms, function(platform) { return [platform.label, platform] }))
-
 
 var round = function (x, n) {
   n = n || 0
@@ -124,6 +123,81 @@ var stp = function (num) {
 var b = function(text) { return '<strong>' + text + "</strong>" }
 
 var builders = { round, td, ptd, th, tr, st, td, st1, st3, stp, b, std }
+
+// Install promotion info in the control bar
+var partners, refs
+async function installPromotions () {
+  partners = await $.ajax('/api/1/promotions/partners')
+  refs = await $.ajax('/api/1/promotions/refs')
+  var partnersSelect = $("#partners")
+  var refsSelect = $("#refs")
+
+  partnersSelect.empty()
+  partnersSelect.append("<option value=''></option>")
+  partners.forEach((row) => {
+    partnersSelect.append("<option>" + row.partner + "</option>")
+  })
+
+  resetRefSelect()
+
+  function resetRefSelect (partner='') {
+    var filteredRefs
+    refsSelect.empty()
+    refsSelect.append("<option value=''></option>")
+    if (partner) {
+      filteredRefs = refs.filter((ref) => { return ref.partner === partner })
+    } else {
+      filteredRefs = refs
+    }
+    filteredRefs.forEach((row) => {
+      refsSelect.append("<option value='" + row.ref + "'>" + row.ref + " - " + row.description + "</option>")
+    })
+  }
+
+  partnersSelect.on("change", (evt) => {
+    resetRefSelect(partnersSelect.val())
+  })
+}
+
+function installPromotionsPopoverHandler () {
+  var partnersSelect = $("#partners")
+  $("#addRef").popover({
+    html: true,
+    placement: "bottom",
+    content: $("#addPromotionFormContainer").html(),
+    title: "Add Promotion",
+    trigger: "manual"
+  })
+
+  $("#addRef").on('click', () => {
+    $("#addRef").popover('toggle')
+    $("#addPromotionFormContainerPartner").val(partnersSelect.val())
+  })
+
+  $('#addRef').on('shown.bs.popover', () => {
+    console.log("installing popover handlers")
+    $("#addPromotionOk").on("click", async (evt) => {
+      var partner = $("#addPromotionFormContainerPartner").val()
+      var ref = $("#addPromotionFormContainerRef").val()
+      var description = $("#addPromotionFormContainerDescription").val()
+      if (partner && ref && description) {
+        $("#addRef").popover("hide")
+        var result = await $.ajax("/api/1/promotions/refs", { type: "POST", data: {
+          ref: ref,
+          partner: partner,
+          description: description
+        }})
+        installPromotions()
+      }
+    })
+    $("#addPromotionCancel").on("click", (evt) => {
+      $("#addRef").popover("hide")
+    })
+  })
+}
+
+installPromotions()
+installPromotionsPopoverHandler()
 
 var crashVersionHandler = function(rows) {
   var s = $('#crash-ratio-versions')
@@ -342,6 +416,8 @@ var buildTelemetryChartBuilder = function (opts) {
 // Build a handler for a successful API request
 var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
   opts = opts || {}
+  x_label = x_label || 'Date'
+  y_label = y_label || 'Platform'
 
   var value_func = function(row, value) {
     var formatter = st
@@ -355,6 +431,10 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
 
   return function (rows) {
     var table = $('#usageDataTable tbody')
+
+    $("#x_label").html(x_label)
+    $("#y_label").html(y_label)
+
     table.empty()
     var ctrl = rows[x]
     var ctrlClass = ''
@@ -482,8 +562,78 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
   }
 }
 
+var retentionMonthHandler = function (rows) {
+  var i, row, cellColor, monthDelta
+  var rowHeadings = []
+  var buffer = ""
+  var baseColor = net.brehaut.Color("#ff5500")
+  var baseColorAvg = net.brehaut.Color("#999999")
+  var sparklineOptions = { width: "60px", height: "25px", disableInteraction: true, fillColor: "#efefef", lineColor: "#999999" }
+
+  // headings
+  buffer += "<table class='table'>"
+  buffer += "<tr class='active'><th colspan='2'>Months from installation</th>"
+  for (i = 0; i < 12; i++) {
+    buffer += '<th class="retentionCell">' + i + '</th>'
+  }
+
+  // heading sparklines
+  buffer += "</tr><tr><td></td><td></td>"
+  for (i = 0; i < 12; i++) {
+    buffer += "<td><span id='sparklineDelta" + i + "'></span></td>"
+  }
+
+  // averages
+  buffer += "</tr><tr><th>Average</th><td></td>"
+  for (i = 0; i < 12; i++) {
+    avg = STATS.STATS.avg(rows.filter((row) => { return row.month_delta === i }).map((row) => { return row.retained_percentage})) || 0
+    cellColor = baseColorAvg.desaturateByAmount(1 - avg).lightenByAmount((1 - avg) / 2.2)
+    buffer += "<td style='background-color: " + cellColor + "' class='retentionCell'>" + st(avg * 100) + "</td>"
+  }
+
+  // cell contents
+  buffer += "</tr><tr>"
+  var ctrl = null
+  for (i = 0; i < rows.length; i++) {
+    row = rows[i]
+    if (row.moi !== ctrl) {
+      buffer += "</tr><tr>"
+      buffer += "<th nowrap>" + moment(row.moi).format('MMM YYYY') + "</th>"
+      buffer += "<td><span id='sparklineActual" + row.moi + "'></span><br>"
+      rowHeadings.push(row.moi)
+      ctrl = row.moi
+      monthDelta = 0
+    }
+    monthDelta += 1
+    cellColor = baseColor.desaturateByAmount(1 - row.retained_percentage).lightenByAmount((1 - row.retained_percentage) / 6.2)
+    buffer += "<td style='background-color: " + cellColor + "' class='retentionCell'>" + st(row.retained_percentage * 100) + "</td>"
+  }
+  buffer += "<td><span id='sparklineDelta" + monthDelta + "'></span><br>"
+  buffer += "</tr>"
+  buffer += "</table>"
+
+  // insert elements
+  var div = $("#retentionMonthTableContainer")
+  div.empty()
+  div.append(buffer)
+
+  // heading sparklines
+  for (i = 0; i < 12; i++) {
+    sparkData = rows.filter((row) => { return row.month_delta === i }).map((row) => { return parseInt(row.retained_percentage * 100)})
+    $("#sparklineDelta" + i).sparkline(sparkData, sparklineOptions)
+  }
+
+  // installation month sparklines
+  rowHeadings.forEach((heading) => {
+    sparkData = rows.filter((row) => { return row.moi === heading }).map((row) => { return parseInt(row.retained_percentage * 100)})
+    $("#sparklineActual" + heading).sparkline(sparkData, sparklineOptions)
+  })
+}
+
 // Data type success handlers
 var usagePlatformHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { colourBy: 'label' })
+
+var retentionHandler = buildSuccessHandler('ymd', 'woi', 'Date', 'Week of installation', { colourBy: 'index' })
 
 var aggMAUHandler = buildSuccessHandler('ymd', 'platform', 'Date', 'Platform', { colourBy: 'label', growth_rate: true })
 
@@ -513,7 +663,8 @@ var contents = [
   "recentCrashContent",
   "developmentCrashContent",
   "crashRatioContent",
-  "searchContent"
+  "searchContent",
+  "retentionMonthContent"
 ]
 
 var serializePlatformParams = function () {
@@ -536,7 +687,8 @@ var standardParams = function() {
     platformFilter: serializePlatformParams(),
     channelFilter: serializeChannelParams(),
     showToday: pageState.showToday,
-    version: pageState.version
+    version: pageState.version,
+    ref: pageState.ref
   })
 }
 
@@ -549,6 +701,27 @@ var standardTelemetryParams = function() {
     version: pageState.version,
     measure: pageState.measure,
     machine: pageState.machine
+  })
+}
+
+var retentionRetriever = function() {
+  $.ajax('/api/1/retention?' + standardParams(), {
+    success: (rows) => {
+      // map week of installation field to 'Month Day'
+      rows = rows.map((row) => {
+        row.woi = moment(row.woi).format('MMM DD')
+        return row
+      })
+      retentionHandler(rows)
+    }
+  })
+}
+
+var retentionMonthRetriever = function() {
+  $.ajax('/api/1/retention_month?' + standardParams(), {
+    success: (rows) => {
+      retentionMonthHandler(rows)
+    }
   })
 }
 
@@ -792,6 +965,16 @@ var menuItems = {
     title: "Overview",
     retriever: overviewRetriever
   },
+  "mnRetention": {
+    show: "usageContent",
+    title: "Retention",
+    retriever: retentionRetriever
+  },
+  "mnRetentionMonth": {
+    show: "retentionMonthContent",
+    title: "Retention Month over Month",
+    retriever: retentionMonthRetriever
+  },
   "mnUsage": {
     show: "usageContent",
     title: "Daily Active Users by Platform (DAU)",
@@ -937,6 +1120,7 @@ var pageState = {
   currentlySelected: null,
   days: 14,
   version: null,
+  ref: null,
   platformFilter: {
     osx: true,
     winx64: true,
@@ -1016,6 +1200,11 @@ var disableMobilePlatforms = function () {
   viewState.platformEnabled.androidbrowser = false
 }
 
+$("#refs").on('change', function (evt, value) {
+  pageState.refs = this.value
+  refreshData()
+})
+
 $("#daysSelector").on('change', function (evt, value) {
   pageState.days = parseInt(this.value, 10)
   refreshData()
@@ -1067,6 +1256,12 @@ var updatePageUIState = function() {
   } else {
     $('#controls').hide()
   }
+
+  if (viewState.showPromotions) {
+    $("#controlsPromotionsPanel").show()
+  } else {
+    $("#controlsPromotionsPanel").hide()
+  }
 }
 
 // Load data for the selected item
@@ -1082,6 +1277,7 @@ var router = new Grapnel()
 router.get('search', function(req) {
   pageState.currentlySelected = 'mnSearch'
   viewState.showControls = false
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1089,6 +1285,7 @@ router.get('search', function(req) {
 router.get('overview', function(req) {
   pageState.currentlySelected = 'mnOverview'
   viewState.showControls = false
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1096,6 +1293,23 @@ router.get('overview', function(req) {
 router.get('versions', function(req) {
   pageState.currentlySelected = 'mnVersions'
   viewState.showControls = true
+  viewState.showPromotions = false
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('retention', function(req) {
+  pageState.currentlySelected = 'mnRetention'
+  viewState.showControls = true
+  viewState.showPromotions = true
+  updatePageUIState()
+  refreshData()
+})
+
+router.get('retention_month', function(req) {
+  pageState.currentlySelected = 'mnRetentionMonth'
+  viewState.showControls = true
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1103,6 +1317,7 @@ router.get('versions', function(req) {
 router.get('usage', function(req) {
   pageState.currentlySelected = 'mnUsage'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1110,6 +1325,7 @@ router.get('usage', function(req) {
 router.get('usage_returning', function(req) {
   pageState.currentlySelected = 'mnUsageReturning'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1117,6 +1333,7 @@ router.get('usage_returning', function(req) {
 router.get('usage_month', function(req) {
   pageState.currentlySelected = 'mnUsageMonth'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1124,6 +1341,7 @@ router.get('usage_month', function(req) {
 router.get('usage_month_agg', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAgg'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1131,6 +1349,7 @@ router.get('usage_month_agg', function(req) {
 router.get('usage_month_average_agg', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAverageAgg'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1138,6 +1357,7 @@ router.get('usage_month_average_agg', function(req) {
 router.get('usage_month_average', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAverage'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1145,6 +1365,7 @@ router.get('usage_month_average', function(req) {
 router.get('usage_month_average_new_agg', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAverageNewAgg'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1152,6 +1373,7 @@ router.get('usage_month_average_new_agg', function(req) {
 router.get('usage_month_average_new', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAverageNew'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1159,6 +1381,7 @@ router.get('usage_month_average_new', function(req) {
 router.get('daily_new', function(req) {
   pageState.currentlySelected = 'mnDailyNew'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1166,6 +1389,7 @@ router.get('daily_new', function(req) {
 router.get('daily_usage_stats', function(req) {
   pageState.currentlySelected = 'mnDailyUsageStats'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1173,6 +1397,7 @@ router.get('daily_usage_stats', function(req) {
 router.get('usage_agg', function(req) {
   pageState.currentlySelected = 'mnUsageAgg'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1180,6 +1405,7 @@ router.get('usage_agg', function(req) {
 router.get('top_crashes', function(req) {
   pageState.currentlySelected = 'mnTopCrashes'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 
@@ -1192,6 +1418,7 @@ router.get('top_crashes', function(req) {
 router.get('crash_ratio', function (req) {
   pageState.currentlySelected = 'mnCrashRatio'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 
@@ -1214,6 +1441,7 @@ router.get('recent_crashes', function(req) {
 router.get('crashes_platform_detail/:ymd/:platform', function(req) {
   pageState.currentlySelected = 'mnCrashesDetails'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   //refreshData()
 })
@@ -1221,6 +1449,7 @@ router.get('crashes_platform_detail/:ymd/:platform', function(req) {
 router.get('crashes_platform_version', function(req) {
   pageState.currentlySelected = 'mnCrashesVersion'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1234,6 +1463,7 @@ router.get('crashes_platform', function(req) {
 router.get('eyeshade', function(req) {
   pageState.currentlySelected = 'mnEyeshade'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1241,6 +1471,7 @@ router.get('eyeshade', function(req) {
 router.get('eyeshade_funded', function(req) {
   pageState.currentlySelected = 'mnFundedEyeshade'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1248,6 +1479,7 @@ router.get('eyeshade_funded', function(req) {
 router.get('eyeshade_funded_percentage', function(req) {
   pageState.currentlySelected = 'mnFundedPercentageEyeshade'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1255,6 +1487,7 @@ router.get('eyeshade_funded_percentage', function(req) {
 router.get('eyeshade_funded_balance', function(req) {
   pageState.currentlySelected = 'mnFundedBalanceEyeshade'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1262,6 +1495,7 @@ router.get('eyeshade_funded_balance', function(req) {
 router.get('eyeshade_funded_balance_average', function(req) {
   pageState.currentlySelected = 'mnFundedBalanceAverageEyeshade'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1269,6 +1503,7 @@ router.get('eyeshade_funded_balance_average', function(req) {
 router.get('telemetry_standard', function(req) {
   pageState.currentlySelected = 'mnTelemetryStandard'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1276,6 +1511,7 @@ router.get('telemetry_standard', function(req) {
 router.get('daily_publishers', function(req) {
   pageState.currentlySelected = 'mnDailyPublishers'
   viewState.showControls = true
+  viewState.showPromotions = false
   updatePageUIState()
   refreshData()
 })
@@ -1284,6 +1520,7 @@ router.get('daily_publishers', function(req) {
 router.get('crash/:id', function(req) {
   pageState.currentlySelected = 'mnTopCrashes'
   viewState.showControls = false
+  viewState.showPromotions = false
   updatePageUIState()
   // Show and hide sub-sections
   $('#top-crash-table').hide()
@@ -1489,4 +1726,10 @@ window.SEARCH_LINKS.setup()
 $("#monthly-averages-whats-this").on('click', function (e) {
   e.preventDefault()
   $("#monthly-averages-instructions").show("slow")
+})
+
+$(document).ajaxStart(function() {
+  $("#hourglassIndicator").fadeIn(200)
+}).ajaxStop(function() {
+  $("#hourglassIndicator").fadeOut(200)
 })

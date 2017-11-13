@@ -32,6 +32,7 @@
   // Return an rgba(x, x, x, x) text string by index
   var colorForIndex = function (idx, opacity) {
     opacity = opacity || 1
+    idx = idx % colors.length
     return 'rgba(' + colors[idx][0] + ', ' + colors[idx][1] + ', ' + colors[idx][2] + ', ' + opacity + ')'
   }
 
