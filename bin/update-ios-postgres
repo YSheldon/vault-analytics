@@ -38,6 +38,9 @@ var resourcesReady = function(asyncError, resources) {
 
     // filter out wrong version formats
     results = results.filter(function (result) {
+      if (result._id.version.match(new RegExp("^\\d+\\.\\d+$"))) {
+        result._id.version += '.0'
+      }
       return result._id.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))
     })
 
