@@ -1,22 +1,33 @@
 (function () {
-  var cachedPublishers
-  var overviewPublisherHandlerDetails = function (publishers=[]) {
+  var overviewPublisherHandlerDetails = function (publishers, platform) {
     var i, publisher, createdWhen
     var details = $("#details-publishers-table tbody")
-    if (!cachedPublishers) cachedPublishers = publishers
-    for (i = details.children().length; i < cachedPublishers.length; i++) {
-      publisher = cachedPublishers[i]
+    details.empty()
+    var grouped = _.groupBy(publishers, (publisher) => { return publisher.platform })
+    var selectedPublishers = grouped[platform]
+    if (!selectedPublishers.length) return
+    for (i = details.children().length; i < selectedPublishers.length; i++) {
+      publisher = selectedPublishers[i]
       createdWhen = moment(publisher.created_at)
       details.append(tr([
-        td("<a href='https://" + publisher.publisher + "'>" + publisher.publisher + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
-        td(publisher.alexa_rank || '-'),
+        td("<a href='" + publisher.url +"'>" + ellipsify(publisher.name || publisher.publisher, 30) + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
+        td(st(publisher.alexa_rank || publisher.audience || 0)),
         td(publisher.verified ? 'Yes' : '-'),
         td(publisher.authorized ? 'Yes' : '-')
       ]))
     }
   }
 
-  var overviewPublisherHandler = function (overview, buckets, publishers=[]) {
+  var overviewPublisherHandlerPlatforms = function (categories) {
+    var i, cls
+    var nav = $("#publisher-platforms-nav-container")
+    for (i = 0; i < categories.length; i++) {
+      cls = categories[i].platform === 'publisher' ? 'active' : ''
+      nav.append(`<li role="presentation" data-platform="${categories[i].platform}" class="${cls}"><a class="publisher-platform-nav-item" href="#" data-platform="${categories[i].platform}" id="publisher-platform-nav-item-${categories[i].platform}"><img src='/local/img/publisher-icons/${categories[i].icon_url}' height="24"/> ${categories[i].label}</a></li>`) 
+    }
+  }
+
+  var overviewPublisherHandler = function (overview, buckets, publishers, publisherCategories) {
     var overviewTable = $("#overview-publishers-table tbody")
     overviewTable.empty()
 
@@ -32,25 +43,30 @@
       td("Authorized"),
       ptd(st(overview.authorized), numeral(overview.authorized / overview.total).format('0.0%'), "left")
     ]))
-    overviewTable.append(tr([
-      td("IRS Forms"),
-      ptd(st(overview.irs), numeral(overview.irs / overview.total).format('0.0%'), "left")
-    ]))
 
     // insert an initial set of top publishers
-    overviewPublisherHandlerDetails(publishers)
+    overviewPublisherHandlerPlatforms(publisherCategories)
+    overviewPublisherHandlerDetails(publishers, 'publisher')
 
-    var bucketTable = $("#overview-publishers-bucketed-table tbody")
-    bucketTable.empty()
+    // setup platfrom nav click handlers
+    $("#publisher-platforms-nav-container").delegate("a.publisher-platform-nav-item").click((evt, tg) => {
+      var li = $(evt.target).closest("li")
+      evt.preventDefault()
+      evt.stopPropagation()
+      var platform = li.data("platform")
 
-    buckets.forEach(function (bucket) {
-      bucketTable.append(tr([
-        td(bucket.days, "right"),
-        td(st(bucket.total), "right"),
-        ptd(st(bucket.verified), numeral(bucket.verified / bucket.total).format('0.0%'), "right"),
-        ptd(st(bucket.authorized), numeral(bucket.authorized / bucket.total).format('0.0%'), "right"),
-        ptd(st(bucket.irs), numeral(bucket.irs / bucket.total).format('0.0%'), "right")
-      ]))
+      li.parent().children().each((idx) => {
+        var sli  = $(li.parent().children()[idx])
+        if (sli.data("platform") === platform) {
+          sli.addClass("active")
+        } else {
+          sli.removeClass("active")
+        }
+      })
+
+      if (platform) {
+        overviewPublisherHandlerDetails(publishers, platform)
+      }
     })
   }
 
@@ -70,7 +86,6 @@
       buf = buf + '<td>' + row.total + '</td>'
       buf = buf + '<td>' + row.verified + ' <span class="subvalue">' + numeral(window.STATS.COMMON.safeDivide(row.verified, row.total)).format('0.0%') + '</span></td>'
       buf = buf + '<td>' + row.authorized + ' <span class="subvalue">' + numeral(window.STATS.COMMON.safeDivide(row.authorized, row.total)).format('0.0%') + '</span></td>'
-      buf = buf + '<td>' + row.irs + ' <span class="subvalue">' + numeral(window.STATS.COMMON.safeDivide(row.irs, row.total)).format('0.0%') + '</span></td>'
       buf = buf + '</tr>'
       table.append(buf)
     })

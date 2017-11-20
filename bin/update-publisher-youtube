@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+
+const pg = require('pg')
+const request = require("request")
+const cheerio = require("cheerio")
+
+function pr (url) {
+  return new Promise((resolve, reject) => {
+    console.log(url)
+    request(url, (err, response, body) => {
+      if (err) { reject(err) }
+      else { resolve(body) }
+    })
+  })
+}
+
+function convertAudienceDisplayValue (adv) {
+  adv = adv.replace(',', '')
+  console.log(adv)
+  if (adv.match(/K$/)) {
+    console.log('K')
+    return parseInt(adv) * 1000 
+  } else if (adv.match(/M$/)) {
+    console.log('M')
+    return parseInt(adv) * 1000000
+  } else {
+    console.log('bare')
+    return parseInt(adv)
+  }
+}
+
+async function retrieveChannelInfo(url) {
+  return new Promise(async (resolve, reject) => {
+    // TODO - make actual call
+    try {
+      var pageContents = await pr(url)
+      require("fs").writeFileSync("yt.html", pageContents)
+      var dom = cheerio.load(pageContents)
+      var name = dom(".branded-page-header-title-link").first().text().trim()
+      var audience = dom(".yt-subscription-button-subscriber-count-branded-horizontal").text().trim() || '0'
+      resolve({
+        name: name,
+        audience: convertAudienceDisplayValue(audience)
+      })
+    } catch (e) {
+      console.log(e)
+      reject(e)
+    }
+  })
+}
+
+async function main () {
+  var i, ranking, publishers, db
+  try {
+    db = await pg.connect(process.env.DATABASE_URL)
+    if (!db) throw "Could not connect to database at " + process.env.DATABASE_URL
+
+    publishers = (await db.query("SELECT * FROM dtl.publishers WHERE platform = 'youtube' and (audience IS NULL OR last_inspected IS NULL) ", [])).rows
+    for (var i = 0; i < publishers.length; i++) {
+      ranking = await retrieveChannelInfo(publishers[i].url)
+      console.log(ranking)
+      if (ranking) {
+        console.log(ranking)
+        await db.query("UPDATE dtl.publishers SET audience = $1, name = $2, last_inspected = CURRENT_TIMESTAMP WHERE publisher = $3", [ranking.audience, ranking.name, publishers[i].publisher])
+      }
+    }
+    db.end() 
+  } catch (e) {
+    console.log(e.toString())
+    process.exit(1)
+  }
+}
+
+main()

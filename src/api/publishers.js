@@ -7,14 +7,11 @@ var _ = require('underscore')
 
 const PUBLISHERS_OVERVIEW = `
 SELECT
-  SUM(total) AS total,
-  SUM(verified) AS verified,
-  SUM(verified) / SUM(total) AS verified_per,
-  SUM(authorized) AS authorized,
-  SUM(authorized) / SUM(total) AS authorized_per,
-  SUM(irs) AS irs,
-  SUM(irs) / SUM(total) AS irs_per
-FROM dw.fc_daily_publishers
+  (select count(1) from dtl.publishers) as total, 
+  (select count(1) from dtl.publishers where verified) as verified,
+  (select count(1) from dtl.publishers where verified) / (select count(1) from dtl.publishers) as verified_per, 
+  (select count(1) from dtl.publishers where authorized) as authorized,
+  (select count(1) from dtl.publishers where authorized) / (select count(1) from dtl.publishers) as authorized_per
 `
 
 const PUBLISHERS_DAILY = `
@@ -51,7 +48,11 @@ WHERE ymd >= current_date - CAST('${days} days' as INTERVAL)`
 }).join(' UNION ') + ') T ORDER BY T.days ASC'
 
 const PUBLISHERS_DETAILS = `
-SELECT * FROM dtl.publishers ORDER BY alexa_rank ASC
+SELECT * FROM dtl.publishers WHERE verified ORDER BY COALESCE(alexa_rank, audience, 0) DESC 
+`
+
+const PUBLISHER_PLATFORMS = `
+SELECT * FROM dtl.publisher_platforms ORDER BY ord ASC
 `
 
 // Endpoint definitions
@@ -120,6 +121,19 @@ exports.setup = (server, client, mongo) => {
     handler: common.buildQueryReponseHandler(
       client,
       PUBLISHERS_DETAILS,
+      (reply, results, request) => {
+        reply(results.rows)
+      },
+      emptyParamsBuilder
+    )
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/api/1/publishers/platforms',
+    handler: common.buildQueryReponseHandler(
+      client,
+      PUBLISHER_PLATFORMS,
       (reply, results, request) => {
         reply(results.rows)
       },

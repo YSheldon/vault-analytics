@@ -61,6 +61,18 @@ export function verifiedPublishers (publishers) {
   })
 }
 
+export function allPublishers (publishers) {
+  return publishers.map((publisher) => {
+    return {
+      publisher: publisher.publisher,
+      verified: !!publisher.verified,
+      authorized: !!publisher.authorized,
+      created: publisher.created || 0,
+      created_at: moment(publisher.created || 0).format('YYYY-MM-DD')
+    }
+  })
+}
+
 export function all (url, done) {
   var intervalID
   var limit = 40
@@ -94,7 +106,7 @@ export function all (url, done) {
           if (response.statusCode === 200) {
             clearInterval(intervalID)
             results = summarizePublishers(JSON.parse(body.replace(/[\x00-\x1f]/g, "")))
-            publishers = verifiedPublishers(JSON.parse(body.replace(/[\x00-\x1f]/g, "")))
+            publishers = allPublishers(JSON.parse(body.replace(/[\x00-\x1f]/g, "")))
             done(null, results, publishers)
           } else {
             limit -= 1

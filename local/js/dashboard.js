@@ -95,6 +95,14 @@ var tr = function (tds, opts) {
   return buf
 }
 
+var ellipsify = function (text, length) {
+  if (text.length > length) {
+    return text.substring(0, length) + '…'
+  } else {
+    return text
+  }
+}
+
 // standard integer number format i.e. 123,456
 var st = function (num) {
   return numeral(num).format('0,0')
@@ -882,7 +890,9 @@ var overviewRetriever = async function () {
   var publishersOverview = await $.ajax('/api/1/publishers/overview')
   var publishersBucketed = await $.ajax('/api/1/publishers/overview/bucketed')
   var publishers = await $.ajax('/api/1/publishers/details')
-  window.STATS.PUB.overviewPublisherHandler(publishersOverview, publishersBucketed, publishers)
+  var publisherPlatforms = await $.ajax('/api/1/publishers/platforms')
+  console.log(publisherPlatforms)
+  window.STATS.PUB.overviewPublisherHandler(publishersOverview, publishersBucketed, publishers, publisherPlatforms)
 
   var btc = await $.ajax('/api/1/ledger_overview')
   var bat = await $.ajax('/api/1/bat/ledger_overview')
