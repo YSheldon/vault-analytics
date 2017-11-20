@@ -1,5 +1,6 @@
 (function () {
   var overviewPublisherHandlerDetails = function (publishers, platform) {
+    if (!publishers.length) return
     var i, publisher, createdWhen
     var details = $("#details-publishers-table tbody")
     details.empty()
