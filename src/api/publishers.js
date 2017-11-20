@@ -9,9 +9,9 @@ const PUBLISHERS_OVERVIEW = `
 SELECT
   (select count(1) from dtl.publishers) as total, 
   (select count(1) from dtl.publishers where verified) as verified,
-  (select count(1) from dtl.publishers where verified) / (select count(1) from dtl.publishers) as verified_per, 
+  (select count(1) from dtl.publishers where verified) / greatest((select count(1) from dtl.publishers), 1) as verified_per, 
   (select count(1) from dtl.publishers where authorized) as authorized,
-  (select count(1) from dtl.publishers where authorized) / (select count(1) from dtl.publishers) as authorized_per
+  (select count(1) from dtl.publishers where authorized) / greatest((select count(1) from dtl.publishers), 1) as authorized_per
 `
 
 const PUBLISHERS_DAILY = `
