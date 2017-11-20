@@ -16,15 +16,11 @@ function pr (url) {
 
 function convertAudienceDisplayValue (adv) {
   adv = adv.replace(',', '')
-  console.log(adv)
   if (adv.match(/K$/)) {
-    console.log('K')
     return parseInt(adv) * 1000 
   } else if (adv.match(/M$/)) {
-    console.log('M')
     return parseInt(adv) * 1000000
   } else {
-    console.log('bare')
     return parseInt(adv)
   }
 }
@@ -58,7 +54,6 @@ async function main () {
     publishers = (await db.query("SELECT * FROM dtl.publishers WHERE platform = 'youtube' and (audience IS NULL OR last_inspected IS NULL) ", [])).rows
     for (var i = 0; i < publishers.length; i++) {
       ranking = await retrieveChannelInfo(publishers[i].url)
-      console.log(ranking)
       if (ranking) {
         console.log(ranking)
         await db.query("UPDATE dtl.publishers SET audience = $1, name = $2, last_inspected = CURRENT_TIMESTAMP WHERE publisher = $3", [ranking.audience, ranking.name, publishers[i].publisher])
