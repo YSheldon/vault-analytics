@@ -1,4 +1,21 @@
 (function () {
+  var providerLogo = (provider) => {
+    if (!provider) return ''
+    var icon = {
+      uphold: '/local/img/provider-icons/uphold.png'
+    }[provider] || ''
+    console.log(icon)
+    return icon
+  }
+
+  var publisherLabel = (publisher) => {
+    if (publisher.platform === 'publisher') {
+      return publisher.publisher
+    } else {
+      return publisher.name
+    }
+  }
+
   var overviewPublisherHandlerDetails = function (publishers, platform) {
     if (!publishers.length) return
     var i, publisher, createdWhen
@@ -11,7 +28,8 @@
       publisher = selectedPublishers[i]
       createdWhen = moment(publisher.created_at)
       details.append(tr([
-        td("<a href='" + publisher.url +"'>" + ellipsify(publisher.name || publisher.publisher, 30) + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
+        td(`<img height=24 src="${providerLogo(publisher.provider)}"/>`, 'right'),
+        td("<a href='" + publisher.url +"'>" + ellipsify(publisherLabel(publisher), 30) + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
         td(st(publisher.alexa_rank || publisher.audience || 0)),
         td(publisher.verified ? 'Yes' : '-'),
         td(publisher.authorized ? 'Yes' : '-')

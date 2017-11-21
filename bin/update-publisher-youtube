@@ -32,10 +32,8 @@ async function retrieveChannelInfo(url) {
       var pageContents = await pr(url)
       require("fs").writeFileSync("yt.html", pageContents)
       var dom = cheerio.load(pageContents)
-      var name = dom(".branded-page-header-title-link").first().text().trim()
       var audience = dom(".yt-subscription-button-subscriber-count-branded-horizontal").text().trim() || '0'
       resolve({
-        name: name,
         audience: convertAudienceDisplayValue(audience)
       })
     } catch (e) {
@@ -56,7 +54,7 @@ async function main () {
       ranking = await retrieveChannelInfo(publishers[i].url)
       if (ranking) {
         console.log(ranking)
-        await db.query("UPDATE dtl.publishers SET audience = $1, name = $2, last_inspected = CURRENT_TIMESTAMP WHERE publisher = $3", [ranking.audience, ranking.name, publishers[i].publisher])
+        await db.query("UPDATE dtl.publishers SET audience = $1, last_inspected = CURRENT_TIMESTAMP WHERE publisher = $2", [ranking.audience, publishers[i].publisher])
       }
     }
     db.end() 

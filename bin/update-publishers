@@ -34,7 +34,7 @@ ON CONFLICT (ymd) DO UPDATE SET
 `
 
 const INSERT_PUBLISHER = `
-INSERT INTO dtl.publishers ( publisher, name, url, created, created_at, verified, authorized, platform ) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8 ) ON CONFLICT (publisher) DO UPDATE SET url = $3, created = $4, created_at = $5, verified = $6, authorized = $7, platform = $8
+INSERT INTO dtl.publishers ( publisher, name, url, created, created_at, verified, authorized, platform, provider ) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9 ) ON CONFLICT (publisher) DO UPDATE SET name = $2, url = $3, created = $4, created_at = $5, verified = $6, authorized = $7, platform = $8, provider = $9
 `
 
 // This is triggered when all resources have valid connections
@@ -53,14 +53,12 @@ var resourcesReady = async function (asyncError, resources) {
       if (publisher.publisher.match(/^youtube\#/)) {
         var [channel, identifier] = publisher.publisher.split('#')[1].split(':')
         publisher.url = `https://youtube.com/${channel}/${identifier}` 
-        publisher.name = publisher.publisher
         publisher.platform = 'youtube'
       } else {
         publisher.url = `https://${publisher.publisher}`
-        publisher.name = publisher.publisher
         publisher.platform = 'publisher'
       }
-      await resources.pg.query(INSERT_PUBLISHER, [publisher.publisher, publisher.publisher, publisher.url, publisher.created, publisher.created_at, publisher.verified, publisher.authorized, publisher.platform])
+      await resources.pg.query(INSERT_PUBLISHER, [publisher.publisher, publisher.name, publisher.url, publisher.created, publisher.created_at, publisher.verified, publisher.authorized, publisher.platform, publisher.provider])
     }
     var funcs = ymdRows.map((row) => {
       return (cb) => {

@@ -65,6 +65,8 @@ export function allPublishers (publishers) {
   return publishers.map((publisher) => {
     return {
       publisher: publisher.publisher,
+      name: publisher.name,
+      provider: publisher.provider,
       verified: !!publisher.verified,
       authorized: !!publisher.authorized,
       created: publisher.created || 0,
