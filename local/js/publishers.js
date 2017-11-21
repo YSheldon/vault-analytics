@@ -40,6 +40,7 @@
   var overviewPublisherHandlerPlatforms = function (categories) {
     var i, cls
     var nav = $("#publisher-platforms-nav-container")
+    nav.empty()
     for (i = 0; i < categories.length; i++) {
       cls = categories[i].platform === 'publisher' ? 'active' : ''
       nav.append(`<li role="presentation" data-platform="${categories[i].platform}" class="${cls}"><a class="publisher-platform-nav-item" href="#" data-platform="${categories[i].platform}" id="publisher-platform-nav-item-${categories[i].platform}"><img src='/local/img/publisher-icons/${categories[i].icon_url}' height="24"/> ${categories[i].label}</a></li>`) 
