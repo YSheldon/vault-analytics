@@ -1,10 +1,11 @@
 (function () {
+  var currentlySelectedPlatform = "publisher"
+
   var providerLogo = (provider) => {
     if (!provider) return ''
     var icon = {
       uphold: '/local/img/provider-icons/uphold.png'
     }[provider] || ''
-    console.log(icon)
     return icon
   }
 
@@ -16,25 +17,35 @@
     }
   }
 
-  var overviewPublisherHandlerDetails = function (publishers, platform) {
+  var overviewPublisherHandlerDetails = async function (publishers, platform) {
     if (!publishers.length) return
-    var i, publisher, createdWhen
-    var details = $("#details-publishers-table tbody")
-    details.empty()
-    var grouped = _.groupBy(publishers, (publisher) => { return publisher.platform })
-    var selectedPublishers = grouped[platform]
-    if (!selectedPublishers.length) return
-    for (i = details.children().length; i < selectedPublishers.length; i++) {
-      publisher = selectedPublishers[i]
-      createdWhen = moment(publisher.created_at)
-      details.append(tr([
-        td(`<img height=24 src="${providerLogo(publisher.provider)}"/>`, 'right'),
-        td("<a href='" + publisher.url +"'>" + ellipsify(publisherLabel(publisher), 30) + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
-        td(st(publisher.alexa_rank || publisher.audience || 0)),
-        td(publisher.verified ? 'Yes' : '-'),
-        td(publisher.authorized ? 'Yes' : '-')
-      ]))
-    }
+    var i, publisher, createdWhen, details, grouped, selectedPublishers
+    var buf = ""
+    $("#details-publishers-table").fadeOut(250, () => {
+      details = $("#details-publishers-table tbody")
+      details.empty()
+      grouped = _.groupBy(publishers, (publisher) => { return publisher.platform })
+      selectedPublishers = grouped[platform]
+      if (!selectedPublishers || !selectedPublishers.length) {
+        $("#details-publishers-table").fadeIn(500)
+        return
+      }
+      for (i = details.children().length; i < selectedPublishers.length; i++) {
+        publisher = selectedPublishers[i]
+        createdWhen = moment(publisher.created_at)
+         buf += tr([
+          td(`<img height=24 src="${providerLogo(publisher.provider)}"/>`, 'right'),
+          td("<a href='" + publisher.url +"'>" + ellipsify(publisherLabel(publisher), 30) + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
+          td(st(publisher.alexa_rank || publisher.audience || 0)),
+          td(publisher.verified ? 'Yes' : '-'),
+          td(publisher.authorized ? 'Yes' : '-')
+        ])
+      }
+      details.append(buf)
+      setTimeout(() => {
+        $("#details-publishers-table").fadeIn(400)
+      })
+    })
   }
 
   var overviewPublisherHandlerPlatforms = function (categories) {
@@ -66,26 +77,30 @@
 
     // insert an initial set of top publishers
     overviewPublisherHandlerPlatforms(publisherCategories)
-    overviewPublisherHandlerDetails(publishers, 'publisher')
+    overviewPublisherHandlerDetails(publishers, currentlySelectedPlatform)
 
     // setup platfrom nav click handlers
     $("#publisher-platforms-nav-container").delegate("a.publisher-platform-nav-item").click((evt, tg) => {
       var li = $(evt.target).closest("li")
       evt.preventDefault()
       evt.stopPropagation()
+      var savedPlatform = currentlySelectedPlatform
       var platform = li.data("platform")
 
+      if (savedPlatform === platform) return
+
+      currentlySelectedPlatform = platform
       li.parent().children().each((idx) => {
         var sli  = $(li.parent().children()[idx])
-        if (sli.data("platform") === platform) {
+        if (sli.data("platform") === currentlySelectedPlatform) {
           sli.addClass("active")
         } else {
           sli.removeClass("active")
         }
       })
 
-      if (platform) {
-        overviewPublisherHandlerDetails(publishers, platform)
+      if (currentlySelectedPlatform) {
+        overviewPublisherHandlerDetails(publishers, currentlySelectedPlatform)
       }
     })
   }
