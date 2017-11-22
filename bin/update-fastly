@@ -108,9 +108,16 @@ var resourcesReady = function(asyncError, resources) {
       throw new Error(s3err)
     }
 
+    records = records.map(function (record) {
+      if (record.version && record.version.match(new RegExp("^\\d+\\.\\d+$"))) {
+        record.version += '.0'
+      }
+      return record
+    })
+
     // remove records not conforming to the semver format
     records = records.filter(function (record) {
-      return record.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))
+      return record.version && record.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))
     })
 
     // Select monthly records
