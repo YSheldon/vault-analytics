@@ -59,21 +59,65 @@
   }
 
   var overviewPublisherHandler = function (overview, buckets, publishers, publisherCategories) {
+    var val, per, buf
+
     var overviewTable = $("#overview-publishers-table tbody")
     overviewTable.empty()
 
-    overviewTable.append(tr([
-      td("Publishers"),
-      td(st(overview.total), "left")
-    ]))
-    overviewTable.append(tr([
-      td("Verified"),
-      ptd(st(overview.verified), numeral(overview.verified / overview.total).format('0.0%'), "left")
-    ]))
-    overviewTable.append(tr([
-      td("Authorized"),
-      ptd(st(overview.authorized), numeral(overview.authorized / overview.total).format('0.0%'), "left")
-    ]))
+    var grouped = _.groupBy(publishers, (publisher) => { return publisher.platform })
+    var platformIds = _.keys(grouped)
+    console.log(publisherCategories)
+
+    buf = ""
+    buf += "<tr>"
+    buf += "<td></td>"
+    buf += "<td></td>"
+    publisherCategories.forEach((platform) => {
+      buf += `<td class="align-left"><img src="/local/img/publisher-icons/${platform.icon_url}" height="16"/></td>`
+    })
+    buf += "</tr>"
+    overviewTable.append(buf)
+
+    buf = "<tr>"
+    buf += td("Publishers"),
+    buf += td(st(publishers.length), "left")
+    publisherCategories.forEach((platform) => {
+      if (grouped[platform.platform]) {
+        buf += td(grouped[platform.platform].length)
+      } else {
+        buf += td("-")
+      }
+    })
+    buf += "</tr>"
+    overviewTable.append(buf)
+
+    buf = "<tr>"
+    buf += td("Verified")
+    buf += ptd(st(overview.verified), numeral(overview.verified / overview.total).format('0.0%'), "left")
+    publisherCategories.forEach((platform) => {
+      if (grouped[platform.platform]) {
+        val = grouped[platform.platform].filter((publisher) => { return publisher.verified }).length
+        per = val / grouped[platform.platform].length
+        buf += ptd(st(val), numeral(per).format('0.0%'), "left")
+      } else {
+        buf += td("-")
+      }
+    })
+    overviewTable.append(buf)
+
+    buf = "<tr>"
+    buf += td("Authorized")
+    buf += ptd(st(overview.authorized), numeral(overview.authorized / overview.total).format('0.0%'), "left")
+    publisherCategories.forEach((platform) => {
+      if (grouped[platform.platform]) {
+        val = grouped[platform.platform].filter((publisher) => { return publisher.authorized }).length
+        per = val / grouped[platform.platform].length
+        buf += ptd(st(val), numeral(per).format('0.0%'), "left")
+      } else {
+        buf += td("-")
+      }
+    })
+    overviewTable.append(buf)
 
     // insert an initial set of top publishers
     overviewPublisherHandlerPlatforms(publisherCategories)

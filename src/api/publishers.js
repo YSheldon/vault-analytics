@@ -48,7 +48,7 @@ WHERE ymd >= current_date - CAST('${days} days' as INTERVAL)`
 }).join(' UNION ') + ') T ORDER BY T.days ASC'
 
 const PUBLISHERS_DETAILS = `
-SELECT * FROM dtl.publishers WHERE verified ORDER BY COALESCE(alexa_rank, audience, 0) DESC 
+SELECT * FROM dtl.publishers ORDER BY COALESCE(alexa_rank, audience, 0) DESC 
 `
 
 const PUBLISHER_PLATFORMS = `
