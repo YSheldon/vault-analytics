@@ -72,20 +72,21 @@
     buf += "<tr>"
     buf += "<td></td>"
     buf += "<td></td>"
+    buf += "<td></td>"
     publisherCategories.forEach((platform) => {
-      buf += `<td class="align-left"><img src="/local/img/publisher-icons/${platform.icon_url}" height="16"/></td>`
+      buf += `<th colspan="2" style="text-align: center;"><img src="/local/img/publisher-icons/${platform.icon_url}" height="16"/></th>`
     })
     buf += "</tr>"
     overviewTable.append(buf)
 
     buf = "<tr>"
     buf += td("Publishers"),
-    buf += td(st(publishers.length), "left")
+    buf += td(st(publishers.length), "right") + td()
     publisherCategories.forEach((platform) => {
       if (grouped[platform.platform]) {
-        buf += td(grouped[platform.platform].length)
+        buf += td(grouped[platform.platform].length, 'right') + td()
       } else {
-        buf += td("-")
+        buf += td("-") + td("")
       }
     })
     buf += "</tr>"
@@ -93,28 +94,28 @@
 
     buf = "<tr>"
     buf += td("Verified")
-    buf += ptd(st(overview.verified), numeral(overview.verified / overview.total).format('0.0%'), "left")
+    buf += tdsv(st(overview.verified), overview.verified / overview.total)
     publisherCategories.forEach((platform) => {
       if (grouped[platform.platform]) {
         val = grouped[platform.platform].filter((publisher) => { return publisher.verified }).length
         per = val / grouped[platform.platform].length
-        buf += ptd(st(val), numeral(per).format('0.0%'), "left")
+        buf += tdsv(st(val), per)
       } else {
-        buf += td("-")
+        buf += td("-") + td("")
       }
     })
     overviewTable.append(buf)
 
     buf = "<tr>"
     buf += td("Authorized")
-    buf += ptd(st(overview.authorized), numeral(overview.authorized / overview.total).format('0.0%'), "left")
+    buf += tdsv(st(overview.authorized), overview.authorized / overview.total)
     publisherCategories.forEach((platform) => {
       if (grouped[platform.platform]) {
         val = grouped[platform.platform].filter((publisher) => { return publisher.authorized }).length
         per = val / grouped[platform.platform].length
-        buf += ptd(st(val), numeral(per).format('0.0%'), "left")
+        buf += tdsv(st(val), per)
       } else {
-        buf += td("-")
+        buf += td("-") + td("")
       }
     })
     overviewTable.append(buf)

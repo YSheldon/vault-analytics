@@ -77,6 +77,10 @@ var ptd = function (val, per, align, opts) {
   return '<td class="text-' + align + '">' + val + ' <span class="subvalue">' + per + '</span></td>'
 }
 
+var tdsv = function (val, per) {
+  return '<td class="text-right">' + val + '</td><td><span class="subvalue">' + numeral(per).format('0.0%') + '</span></td>'
+}
+
 var th = function (contents, align, opts) {
   contents = contents || ''
   align = align || 'left'
