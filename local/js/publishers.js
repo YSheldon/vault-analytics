@@ -36,9 +36,9 @@
          buf += tr([
           td(`<img height=24 src="${providerLogo(publisher.provider)}"/>`, 'right'),
           td("<a href='" + publisher.url +"'>" + ellipsify(publisherLabel(publisher), 30) + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
-          td(st(publisher.alexa_rank || publisher.audience || 0)),
-          td(publisher.verified ? '<i class="fa fa-check"></i>' : ''),
-          td(publisher.authorized ? '<i class="fa fa-check"></i>' : '')
+          td(st(publisher.alexa_rank || publisher.audience || 0), "right"),
+          td(publisher.verified ? '<i class="fa fa-check"></i>' : '', "center"),
+          td(publisher.authorized ? '<i class="fa fa-check"></i>' : '', "center")
         ])
       }
       details.append(buf)
