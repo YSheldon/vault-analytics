@@ -37,8 +37,8 @@
           td(`<img height=24 src="${providerLogo(publisher.provider)}"/>`, 'right'),
           td("<a href='" + publisher.url +"'>" + ellipsify(publisherLabel(publisher), 30) + "</a><br><span class='subvalue'>" + createdWhen.format("MMM DD, YYYY") + " " + createdWhen.fromNow() + "</span>"),
           td(st(publisher.alexa_rank || publisher.audience || 0)),
-          td(publisher.verified ? 'Yes' : '-'),
-          td(publisher.authorized ? 'Yes' : '-')
+          td(publisher.verified ? '<i class="fa fa-check"></i>' : ''),
+          td(publisher.authorized ? '<i class="fa fa-check"></i>' : '')
         ])
       }
       details.append(buf)
@@ -84,7 +84,7 @@
     buf += td(st(publishers.length), "right") + td()
     publisherCategories.forEach((platform) => {
       if (grouped[platform.platform]) {
-        buf += td(grouped[platform.platform].length, 'right') + td()
+        buf += td(st(grouped[platform.platform].length), 'right') + td()
       } else {
         buf += td("-") + td("")
       }
