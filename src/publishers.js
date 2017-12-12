@@ -6,6 +6,7 @@ var _ = require('underscore')
 var request = require('request')
 var ProxyAgent = require('proxy-agent')
 const moment = require('moment')
+const common = require('./common')
 
 var agent
 if (!process.env.LOCAL) {
@@ -80,14 +81,12 @@ export function all (url, done) {
   var limit = 40
   var delay = 10000
 
-  var token = process.env.EYESHADE_TOKEN
+  var token = process.env.EYESHADE_TOKEN || common.nope('EYESHADE_TOKEN required')
   var options = {
     uri: url + "/v2/reports/publishers/status?format=json&summary=true&access_token=" + token,
-    // uri: "https://eyeshade.brave.com/v2/reports/publishers/status?format=json&summary=true&access_token=" + token,
     method: 'GET'
   }
   if (agent) options.agent = agent
-  console.log(options)
   request(options, function (err, response, body) {
     if (err) {
       console.log(err)
@@ -112,7 +111,10 @@ export function all (url, done) {
             done(null, results, publishers)
           } else {
             limit -= 1
-            if (limit === 0) process.exit(1)
+            if (limit === 0) {
+              throw new Error("Error: timeout reached for update-publishers")
+              process.exit(1)
+            }
           }
         })
       }, delay)
