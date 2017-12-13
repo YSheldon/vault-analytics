@@ -15,7 +15,7 @@ function pr (url) {
 }
 
 function convertAudienceDisplayValue (adv) {
-  adv = adv.replace(',', '')
+  adv = adv.replace(/,/g, '')
   if (adv.match(/K$/)) {
     return parseInt(adv) * 1000 
   } else if (adv.match(/M$/)) {
