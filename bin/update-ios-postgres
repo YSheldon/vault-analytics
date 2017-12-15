@@ -8,6 +8,7 @@ var async = require('async')
 var _ = require('underscore')
 var fs = require('fs')
 var path = require('path')
+var moment = require('moment')
 
 var mongoc = require('../dist/mongoc')
 var retriever = require('../dist/retriever')
@@ -53,10 +54,13 @@ var resourcesReady = function(asyncError, resources) {
     console.log('Updating ' + results.length + ' rows in Postgres')
 
     // Insert rows
-    async.series(funcs, function(err, results) {
+    async.series(funcs, async function(err, results) {
       if (err) {
         throw new Error(err)
       }
+      console.log("Moving iOS usage records to canonical usage table")
+      var limit = moment().subtract(14, 'days').format('YYYY-MM-DD')
+      await model.moveiOSUsageToUsage(resources.pg, limit)
       // Report the results of the job run
       reporter.shutdown(runInfo, resources.pg, cleanup)
     })
