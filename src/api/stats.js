@@ -302,7 +302,6 @@ exports.setup = (server, client, mongo) => {
     let platforms = common.platformPostgresArray(request.query.platformFilter)
     let channels = common.channelPostgresArray(request.query.channelFilter)
     let ref = request.query.ref || null
-    console.log([days, platforms, channels, ref])
     return [days, platforms, channels, ref]
   }
 
@@ -327,9 +326,7 @@ exports.setup = (server, client, mongo) => {
     path: '/api/1/dau',
     handler: async function (request, reply) {
       var [days, platforms, channels, ref] = retrieveCommonParameters(request)
-      console.log([days, platforms, channels, ref])
       var results = await client.query(DAU, [days, platforms, channels, ref])
-      console.log(results)
       results.rows.forEach((row) => common.formatPGRow(row))
       results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
       reply(results.rows)
