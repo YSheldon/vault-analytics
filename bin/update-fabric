@@ -54,7 +54,6 @@ var retrieveFabricCSV = function (url, done) {
       if (err) {
         throw new Error(err.toString())
       }
-      console.log(body)
       done(body)
     }
   )
