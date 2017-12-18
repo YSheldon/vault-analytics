@@ -141,38 +141,57 @@ var partners, refs
 async function installPromotions () {
   partners = await $.ajax('/api/1/promotions/partners')
   refs = await $.ajax('/api/1/promotions/refs')
-  var partnersSelect = $("#partners")
   var refsSelect = $("#refs")
 
-  partnersSelect.empty()
-  partnersSelect.append("<option value=''></option>")
-  partners.forEach((row) => {
-    partnersSelect.append("<option>" + row.partner + "</option>")
+  $('#refs_autocomplete').typeahead({
+    minLength: 0,
+    highlight: true
+  }, {
+    source: function (query, sync, async) {
+      query = query.toLowerCase()
+      refs.forEach((obj) => {
+        obj.searchable = (obj.ref + ' - ' + obj.description + ' (' + obj.partner + ')').toLowerCase()
+        obj.rendered = obj.ref + ' - ' + obj.description + ' (' + obj.partner + ')'
+      })
+      var selected = refs.filter((obj) => { return obj.searchable.match(query) })
+      sync(selected)  
+    },
+    display: function (obj) {
+      return obj.rendered
+    },
+    templates: {
+      suggestion: function (obj) {
+        return `<p><img src="/local/img/publisher-icons/${publisherPlatformsByPlatform[obj.platform].icon_url}" width="24"> ${obj.ref} - ${obj.description} (${obj.partner})</p>`
+      }
+    }
   })
 
-  resetRefSelect()
+  $('#refs_autocomplete').on("typeahead:select", function (evt, obj) {
+    $("#clearRef").show()
+    pageState.ref = obj.ref
+    refreshData()
+  })
 
-  function resetRefSelect (partner='') {
-    var filteredRefs
-    refsSelect.empty()
-    refsSelect.append("<option value=''></option>")
-    if (partner) {
-      filteredRefs = refs.filter((ref) => { return ref.partner === partner })
+  $('#refs_autocomplete').on("keyup", function (evt) {
+    if ($('#refs_autocomplete').val()) {
+      $("#clearRef").show()
     } else {
-      filteredRefs = refs
-    }
-    filteredRefs.forEach((row) => {
-      refsSelect.append("<option value='" + row.ref + "'>" + row.ref + " - " + row.description + "</option>")
-    })
-  }
-
-  partnersSelect.on("change", (evt) => {
-    resetRefSelect(partnersSelect.val())
+      $("#clearRef").hide()
+    } 
   })
 }
 
 function installPromotionsPopoverHandler () {
   var partnersSelect = $("#partners")
+
+  var platformContainer = $("#addPromotionFormContainerPlatform")
+  platformContainer.empty()
+
+  publisherPlatforms.forEach((platform) => {
+    var buffer = `<option value="${platform.platform}">${platform.label}</option>`
+    platformContainer.append(buffer)    
+  })
+
   $("#addRef").popover({
     html: true,
     placement: "bottom",
@@ -192,13 +211,17 @@ function installPromotionsPopoverHandler () {
       var partner = $("#addPromotionFormContainerPartner").val()
       var ref = $("#addPromotionFormContainerRef").val()
       var description = $("#addPromotionFormContainerDescription").val()
-      if (partner && ref && description) {
+      var platform = $("#addPromotionFormContainerPlatform").val()
+      console.log(partner, ref, description, platform)
+      if (partner && ref && description && platform) {
         $("#addRef").popover("hide")
         var result = await $.ajax("/api/1/promotions/refs", { type: "POST", data: {
           ref: ref,
           partner: partner,
-          description: description
+          description: description,
+          platform: platform
         }})
+        console.log(result)
         installPromotions()
       }
     })
@@ -208,8 +231,17 @@ function installPromotionsPopoverHandler () {
   })
 }
 
+function installPromotionsClearHandler () {
+  $("#clearRef").on("click", function () {
+    $("#refs_autocomplete").typeahead('val', '')
+    $("#clearRef").hide()
+    pageState.ref = null
+    refreshData()
+  })
+}
+
 installPromotions()
-installPromotionsPopoverHandler()
+installPromotionsClearHandler()
 
 var crashVersionHandler = function(rows) {
   var s = $('#crash-ratio-versions')
@@ -481,7 +513,7 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
       grandTotalAccumulator += row.count
     })
 
-    if (opts.growth_rate) {
+    if (opts.growth_rate && rows[0]) {
       averageGrowthRate = Math.pow(rows[rows.length - 1].count / rows[0].count, 1 / rows.length) - 1
       averageGrowthRateDesc = "Math.pow(" + rows[rows.length - 1].count + "/" + rows[0].count + ", 1 / " + rows.length + ") - 1"
       console.log(averageGrowthRate)
@@ -498,7 +530,6 @@ var buildSuccessHandler = function (x, y, x_label, y_label, opts) {
       ]))
 
       for (i = 1; i < 13; i++) {
-        console.log(i, moment(rows[rows.length - 1].x), rows[rows.length - 1])
         table.append(tr([
           td(moment(rows[rows.length - 1].ymd).add(i, 'months').format('MMMM YYYY')),
           td(st(rows[rows.length - 1].count * Math.pow(1 + averageGrowthRate, i)))
@@ -894,8 +925,7 @@ var overviewRetriever = async function () {
   var publishersOverview = await $.ajax('/api/1/publishers/overview')
   var publishersBucketed = await $.ajax('/api/1/publishers/overview/bucketed')
   var publishers = await $.ajax('/api/1/publishers/details')
-  var publisherPlatforms = await $.ajax('/api/1/publishers/platforms')
-  console.log(publisherPlatforms)
+
   window.STATS.PUB.overviewPublisherHandler(publishersOverview, publishersBucketed, publishers, publisherPlatforms)
 
   var btc = await $.ajax('/api/1/ledger_overview')
@@ -1215,10 +1245,6 @@ var disableMobilePlatforms = function () {
   viewState.platformEnabled.androidbrowser = false
 }
 
-$("#refs").on('change', function (evt, value) {
-  pageState.refs = this.value
-  refreshData()
-})
 
 $("#daysSelector").on('change', function (evt, value) {
   pageState.days = parseInt(this.value, 10)
@@ -1308,7 +1334,7 @@ router.get('overview', function(req) {
 router.get('versions', function(req) {
   pageState.currentlySelected = 'mnVersions'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1332,7 +1358,7 @@ router.get('retention_month', function(req) {
 router.get('usage', function(req) {
   pageState.currentlySelected = 'mnUsage'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1340,7 +1366,7 @@ router.get('usage', function(req) {
 router.get('usage_returning', function(req) {
   pageState.currentlySelected = 'mnUsageReturning'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1348,7 +1374,7 @@ router.get('usage_returning', function(req) {
 router.get('usage_month', function(req) {
   pageState.currentlySelected = 'mnUsageMonth'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1356,7 +1382,7 @@ router.get('usage_month', function(req) {
 router.get('usage_month_agg', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAgg'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1364,7 +1390,7 @@ router.get('usage_month_agg', function(req) {
 router.get('usage_month_average_agg', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAverageAgg'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1372,7 +1398,7 @@ router.get('usage_month_average_agg', function(req) {
 router.get('usage_month_average', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAverage'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1380,7 +1406,7 @@ router.get('usage_month_average', function(req) {
 router.get('usage_month_average_new_agg', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAverageNewAgg'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1388,7 +1414,7 @@ router.get('usage_month_average_new_agg', function(req) {
 router.get('usage_month_average_new', function(req) {
   pageState.currentlySelected = 'mnUsageMonthAverageNew'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1396,7 +1422,7 @@ router.get('usage_month_average_new', function(req) {
 router.get('daily_new', function(req) {
   pageState.currentlySelected = 'mnDailyNew'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1412,7 +1438,7 @@ router.get('daily_usage_stats', function(req) {
 router.get('usage_agg', function(req) {
   pageState.currentlySelected = 'mnUsageAgg'
   viewState.showControls = true
-  viewState.showPromotions = false
+  viewState.showPromotions = true
   updatePageUIState()
   refreshData()
 })
@@ -1748,3 +1774,16 @@ $(document).ajaxStart(function() {
 }).ajaxStop(function() {
   $("#hourglassIndicator").fadeOut(200)
 })
+
+$('[data-toggle="tooltip"]').tooltip()
+
+var publisherPlatforms
+var publisherPlatformsByPlatform
+async function loadInitialData () {
+  publisherPlatforms = await $.ajax('/api/1/publishers/platforms')
+  publisherPlatformsByPlatform = _.object(publisherPlatforms.map((platform) => { return [platform.platform, platform] }))
+  installPromotionsPopoverHandler()
+  $("#clearRef").hide()
+}
+
+loadInitialData()

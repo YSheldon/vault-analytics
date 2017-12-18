@@ -14,7 +14,8 @@ tap.test('usageUpserter', function (clientTest) {
       tap.ok(parameters[2] === '0.10.0', 'correct version')
       tap.ok(parameters[3] === false, 'correct first time')
       tap.ok(parameters[4] === 'dev', 'correct channel')
-      tap.ok(parameters[5] === 5, 'correct count')
+      tap.ok(parameters[5] === 'promo1', 'correct promo')
+      tap.ok(parameters[6] === 5, 'correct count')
       cb(null)
     }
   }
@@ -25,7 +26,8 @@ tap.test('usageUpserter', function (clientTest) {
       platform: 'osx',
       version: '0.10.0',
       channel: 'dev',
-      first_time: false
+      first_time: false,
+      ref: 'promo1' 
     },
     count: 5
   })

@@ -58,7 +58,8 @@ SELECT ymd, SUM(average_dau) AS count
 FROM dw.fc_average_monthly_usage_mv
 WHERE
   platform = ANY ($1) AND
-  channel = ANY ($2)
+  channel = ANY ($2) AND
+  ref = COALESCE($3, ref)
 GROUP BY ymd
 ORDER BY ymd DESC
 `
@@ -68,7 +69,8 @@ SELECT ymd, platform, SUM(average_dau) AS count
 FROM dw.fc_average_monthly_usage_mv
 WHERE
   platform = ANY ($1) AND
-  channel = ANY ($2)
+  channel = ANY ($2) AND
+  ref = COALESCE($3, ref)
 GROUP BY ymd, platform
 ORDER BY ymd DESC, platform
 `
@@ -78,7 +80,8 @@ SELECT ymd, SUM(average_first_time) AS count
 FROM dw.fc_average_monthly_usage_mv
 WHERE
   platform = ANY ($1) AND
-  channel = ANY ($2)
+  channel = ANY ($2) AND
+  ref = COALESCE($3, ref)
 GROUP BY ymd
 ORDER BY ymd DESC
 `
@@ -88,7 +91,8 @@ SELECT ymd, platform, SUM(average_first_time) AS count
 FROM dw.fc_average_monthly_usage_mv
 WHERE
   platform = ANY ($1) AND
-  channel = ANY ($2)
+  channel = ANY ($2) AND
+  ref = COALESCE($3, ref)
 GROUP BY ymd, platform
 ORDER BY ymd DESC, platform
 `
@@ -99,7 +103,8 @@ FROM dw.fc_usage
 WHERE
   ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   platform = ANY ($2) AND
-  channel = ANY ($3)
+  channel = ANY ($3) AND
+  ref = COALESCE($4, ref)
 GROUP BY ymd
 ORDER BY ymd DESC
 `
@@ -113,6 +118,7 @@ FROM dw.fc_usage_month
 WHERE
   platform = ANY ($1) AND
   channel = ANY ($2) AND
+  ref = COALESCE($3, ref) AND
   ymd > '2016-01-31'
 GROUP BY
   left(ymd::text, 7),
@@ -130,6 +136,7 @@ FROM dw.fc_usage_month
 WHERE
   platform = ANY ($1) AND
   channel = ANY ($2) AND
+  ref = COALESCE($3, ref) AND
   ymd > '2016-01-31'
 GROUP BY
   left(ymd::text, 7)
@@ -181,7 +188,8 @@ FROM dw.fc_usage_platform_mv FC
 WHERE
   FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   FC.platform = ANY ($2) AND
-  FC.channel = ANY ($3)
+  FC.channel = ANY ($3) AND
+  FC.ref = COALESCE($4, ref)
 GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
@@ -203,7 +211,8 @@ FROM dw.fc_usage FC
 WHERE
   FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   FC.platform = ANY ($2) AND
-  FC.channel = ANY ($3)
+  FC.channel = ANY ($3) AND
+  FC.ref = COALESCE($4, ref)
 GROUP BY FC.ymd, FC.platform
   ORDER BY FC.ymd DESC, FC.platform
 ) USAGE JOIN (
@@ -216,6 +225,7 @@ WHERE
   FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   FC.platform = ANY ($2) AND
   FC.channel = ANY ($3) AND
+  FC.ref = COALESCE($4, ref) AND
   FC.first_time
 GROUP BY FC.ymd, FC.platform
   ORDER BY FC.ymd DESC, FC.platform
@@ -234,7 +244,8 @@ WHERE
   FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   first_time AND
   FC.platform = ANY ($2) AND
-  FC.channel = ANY ($3)
+  FC.channel = ANY ($3) AND
+  FC.ref = COALESCE($4, ref)
 GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
@@ -276,35 +287,37 @@ FROM dw.fc_usage FC
 WHERE
   FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
   FC.platform = ANY ($2) AND
-  FC.channel = ANY ($3)
+  FC.channel = ANY ($3) AND
+  FC.ref = COALESCE($4, ref)
 GROUP BY FC.ymd, FC.version
 ORDER BY FC.ymd DESC, FC.version
 `
-
 
 // Data endpoints
 exports.setup = (server, client, mongo) => {
   assert(mongo, 'mongo configured')
 
+  function retrieveCommonParameters (request) {
+    let days = parseInt(request.query.days || 7, 10) + ' days'
+    let platforms = common.platformPostgresArray(request.query.platformFilter)
+    let channels = common.channelPostgresArray(request.query.channelFilter)
+    let ref = request.query.ref || null
+    console.log([days, platforms, channels, ref])
+    return [days, platforms, channels, ref]
+  }
+
   // Version for today's daily active users
   server.route({
     method: 'GET',
     path: '/api/1/versions',
-    handler: function (request, reply) {
-      let days = parseInt(request.query.days || 7, 10) + ' days'
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(DAU_VERSION, [days, platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          // condense small version counts to an 'other' category
-          results.rows = dataset.condense(results.rows, 'ymd', 'version')
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(DAU_VERSION, [days, platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      // condense small version counts to an 'other' category
+      results.rows = dataset.condense(results.rows, 'ymd', 'version')
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      reply(results.rows)
     }
   })
 
@@ -312,20 +325,14 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/dau',
-    handler: function (request, reply) {
-      let days = parseInt(request.query.days || 7, 10)
-      days += ' days'
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(DAU, [days, platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString()).status(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      console.log([days, platforms, channels, ref])
+      var results = await client.query(DAU, [days, platforms, channels, ref])
+      console.log(results)
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      reply(results.rows)
     }
   })
 
@@ -358,38 +365,26 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/dau_monthly_average',
-    handler: function (request, reply) {
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(AVERAGE_MONTHLY_DAU, [platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString())
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(AVERAGE_MONTHLY_DAU, [platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      reply(results.rows)
     }
   })
 
-    // Monthly average daily active users
+  // Monthly average daily active users
   server.route({
     method: 'GET',
     path: '/api/1/dau_monthly_average_platform',
-    handler: function (request, reply) {
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(AVERAGE_MONTHLY_DAU_PLATFORM, [platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString())
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          results.rows.forEach((row) => common.convertPlatformLabels(row))
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(AVERAGE_MONTHLY_DAU_PLATFORM, [platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      results.rows.forEach((row) => common.convertPlatformLabels(row))
+      reply(results.rows)
     }
   })
 
@@ -397,38 +392,26 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/dau_first_monthly_average',
-    handler: function (request, reply) {
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(AVERAGE_MONTHLY_FIRST_DAU, [platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString()).status(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(AVERAGE_MONTHLY_FIRST_DAU, [platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      reply(results.rows)
     }
   })
 
-  // Monthly average daily first time users
+  // Monthly average daily first time users by platform
   server.route({
     method: 'GET',
     path: '/api/1/dau_first_monthly_average_platform',
-    handler: function (request, reply) {
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(AVERAGE_MONTHLY_FIRST_DAU_PLATFORM, [platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString()).status(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          results.rows.forEach((row) => common.convertPlatformLabels(row))
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(AVERAGE_MONTHLY_FIRST_DAU_PLATFORM, [platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      results.rows.forEach((row) => common.convertPlatformLabels(row))
+      reply(results.rows)
     }
   })
 
@@ -463,7 +446,6 @@ exports.setup = (server, client, mongo) => {
         let channels = common.channelPostgresArray(request.query.channelFilter)
         let refs = ['none']
         let rows = (await client.query(RETENTION_MONTH, [platforms, channels, refs])).rows
-        console.log(rows)
         rows.forEach((row) => common.convertPlatformLabels(row))
         rows = rows.map((row) => {
           row.current = parseInt(row.current)
@@ -483,21 +465,13 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/dau_platform',
-    handler: function (request, reply) {
-      let days = parseInt(request.query.days || 7, 10)
-      days += ' days'
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(DAU_PLATFORM, [days, platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString()).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          results.rows.forEach((row) => common.convertPlatformLabels(row))
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(DAU_PLATFORM, [days, platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      results.rows.forEach((row) => common.convertPlatformLabels(row))
+      reply(results.rows)
     }
   })
 
@@ -505,21 +479,13 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/dau_platform_minus_first',
-    handler: function (request, reply) {
-      let days = parseInt(request.query.days || 7, 10)
-      days += ' days'
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(DAU_PLATFORM_MINUS_FIRST, [days, platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString()).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          results.rows.forEach((row) => common.convertPlatformLabels(row))
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(DAU_PLATFORM_MINUS_FIRST, [days, platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      results.rows.forEach((row) => common.convertPlatformLabels(row))
+      reply(results.rows)
     }
   })
 
@@ -527,20 +493,13 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/mau_platform',
-    handler: function (request, reply) {
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(MAU_PLATFORM, [platforms, channels], (err, results) => {
-        if (err) {
-          console.log(err.toString())
-          reply(err.toString()).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterThisMonth(results.rows, request.query.showToday === 'true')
-          results.rows.forEach((row) => common.convertPlatformLabels(row))
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(MAU_PLATFORM, [platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterThisMonth(results.rows, request.query.showToday === 'true')
+      results.rows.forEach((row) => common.convertPlatformLabels(row))
+      reply(results.rows)
     }
   })
 
@@ -548,19 +507,12 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/mau',
-    handler: function (request, reply) {
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(MAU, [platforms, channels], (err, results) => {
-        if (err) {
-          console.log(err.toString())
-          reply(err.toString()).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterThisMonth(results.rows, request.query.showToday === 'true')
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(MAU, [platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterThisMonth(results.rows, request.query.showToday === 'true')
+      reply(results.rows)
     }
   })
 
@@ -568,20 +520,13 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/dau_platform_first',
-    handler: function (request, reply) {
-      let days = parseInt(request.query.days || 7, 10) + ' days'
-      let platforms = common.platformPostgresArray(request.query.platformFilter)
-      let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(DAU_PLATFORM_FIRST, [days, platforms, channels], (err, results) => {
-        if (err) {
-          reply(err.toString()).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
-          results.rows.forEach((row) => common.convertPlatformLabels(row))
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      var [days, platforms, channels, ref] = retrieveCommonParameters(request)
+      var results = await client.query(DAU_PLATFORM_FIRST, [days, platforms, channels, ref])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows = common.potentiallyFilterToday(results.rows, request.query.showToday === 'true')
+      results.rows.forEach((row) => common.convertPlatformLabels(row))
+      reply(results.rows)
     }
   })
 

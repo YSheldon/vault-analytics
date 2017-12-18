@@ -59,6 +59,9 @@ exports.dailyCrashReportsFullGrouped = (db, cb, ts, days) => {
         version: {
           $ifNull: [ '$_version', '0.0.0' ]
         },
+        ref: {
+          $ifNull: [ '$_ref', 'none' ]
+        },
         ymd: {
           $dateToString: {
             format: '%Y-%m-%d', date: {
@@ -74,7 +77,8 @@ exports.dailyCrashReportsFullGrouped = (db, cb, ts, days) => {
           ymd: '$ymd',
           platform: '$platform',
           version: '$version',
-          channel: '$channel'
+          channel: '$channel',
+          ref: '$ref'
         },
         count: {
           $sum: 1
@@ -86,7 +90,8 @@ exports.dailyCrashReportsFullGrouped = (db, cb, ts, days) => {
         '_id.ymd': -1,
         '_id.platform': 1,
         '_id.version': 1,
-        '_id.channel': 1
+        '_id.channel': 1,
+        '_id.ref': 1
       }
     }
   ])
@@ -133,6 +138,9 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
         channel: {
           $ifNull: [ '$channel', 'dev' ]
         },
+        ref: {
+          $ifNull: [ '$ref', 'none' ]
+        },
         ymd: {
           $ifNull: [ '$year_month_day', '2016-02-10']
         }
@@ -145,7 +153,8 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
           platform: '$platform',
           version: '$version',
           first_time: '$first_time',
-          channel: '$channel'
+          channel: '$channel',
+          ref: '$ref'
         },
         count: {
           $sum: 1
@@ -158,7 +167,8 @@ exports.dailyActiveUsersFullGrouped = (db, exceptions, cb, ts, days) => {
         '_id.platform': 1,
         '_id.version': 1,
         '_id.first_time': 1,
-        '_id.channel': 1
+        '_id.channel': 1,
+        '_id.ref': 1
       }
     }
   ], { explain: false })
@@ -203,6 +213,9 @@ exports.dailyActiveAndroidUsersFullGrouped = (db, exceptions, cb) => {
         channel: {
           $ifNull: [ '$channel', 'dev' ]
         },
+        ref: {
+          $ifNull: [ '$ref', 'dev' ]
+        },
         ymd: {
           $ifNull: [ '$year_month_day', '2016-02-10']
         }
@@ -215,7 +228,8 @@ exports.dailyActiveAndroidUsersFullGrouped = (db, exceptions, cb) => {
           platform: '$platform',
           version: '$version',
           first_time: '$first_time',
-          channel: '$channel'
+          channel: '$channel',
+          ref: '$ref'
         },
         count: {
           $sum: 1
@@ -228,7 +242,8 @@ exports.dailyActiveAndroidUsersFullGrouped = (db, exceptions, cb) => {
         '_id.platform': 1,
         '_id.version': 1,
         '_id.first_time': 1,
-        '_id.channel': 1
+        '_id.channel': 1,
+        '_id.ref': 1
       }
     }
   ], { explain: false })
@@ -273,6 +288,9 @@ exports.dailyActiveiOSUsersFullGrouped = (db, exceptions, cb) => {
         channel: {
           $ifNull: [ '$channel', 'dev' ]
         },
+        ref: {
+          $ifNull: [ '$ref', 'none' ]
+        },
         ymd: {
           $ifNull: [ '$year_month_day', '2016-02-10']
         }
@@ -285,7 +303,8 @@ exports.dailyActiveiOSUsersFullGrouped = (db, exceptions, cb) => {
           platform: '$platform',
           version: '$version',
           first_time: '$first_time',
-          channel: '$channel'
+          channel: '$channel',
+          ref: '$ref'
         },
         count: {
           $sum: 1
@@ -298,7 +317,8 @@ exports.dailyActiveiOSUsersFullGrouped = (db, exceptions, cb) => {
         '_id.platform': 1,
         '_id.version': 1,
         '_id.first_time': 1,
-        '_id.channel': 1
+        '_id.channel': 1,
+        '_id.ref': 1
       }
     }
   ], { explain: false })
@@ -351,6 +371,9 @@ exports.monthlyUsersByDay = (db, cb, collection) => {
         channel: {
           $ifNull: [ '$channel', 'dev' ]
         },
+        ref: {
+          $ifNull: [ '$ref', 'none' ]
+        },
         ymd: {
           $dateToString: {
             format: '%Y-%m-%d', date: {
@@ -366,7 +389,8 @@ exports.monthlyUsersByDay = (db, cb, collection) => {
           ymd: '$ymd',
           platform: '$platform',
           version: '$version',
-          channel: '$channel'
+          channel: '$channel',
+          ref: '$ref'
         },
         count: {
           $sum: 1
@@ -378,7 +402,8 @@ exports.monthlyUsersByDay = (db, cb, collection) => {
         '_id.ymd': -1,
         '_id.platform': 1,
         '_id.version': 1,
-        '_id.channel': 1
+        '_id.channel': 1,
+        '_id.ref': 1
       }
     }
   ])

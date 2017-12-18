@@ -41,8 +41,8 @@ var ledger = function (btc, bat, b) {
 
   overviewTable.append(tr([
     b.td(""),
-    b.th('BTC', "right"),
-    b.th('BAT', "right"),
+    b.th('<img src="/local/img/token-icons/btc.png" height="18"> BTC', "right"),
+    b.th('<img src="/local/img/token-icons/bat.svg" height="18"> BAT', "right"),
     b.td()
   ]))
   overviewTable.append(tr([

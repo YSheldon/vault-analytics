@@ -78,8 +78,8 @@ export function allPublishers (publishers) {
 
 export function all (url, done) {
   var intervalID
-  var limit = 40
-  var delay = 10000
+  var limit = 10
+  var delay = 20000
 
   var token = process.env.EYESHADE_TOKEN || common.nope('EYESHADE_TOKEN required')
   var options = {
@@ -106,6 +106,7 @@ export function all (url, done) {
           console.log("checking " + limit + ' - ' + response.statusCode)
           if (response.statusCode === 200) {
             clearInterval(intervalID)
+            require('fs').writeFileSync('results.txt', body)
             results = summarizePublishers(JSON.parse(body.replace(/[\x00-\x1f]/g, "")))
             publishers = allPublishers(JSON.parse(body.replace(/[\x00-\x1f]/g, "")))
             done(null, results, publishers)

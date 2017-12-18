@@ -45,7 +45,7 @@ exports.setup = (server, client, mongo) => {
     path: '/api/1/promotions/refs',
     handler: async function (request, reply) {
       try {
-        var result = await client.query("INSERT INTO dtl.promotions ( partner, ref, description ) VALUES ( $1, $2, $3 )", [request.payload.partner, request.payload.ref, request.payload.description]) 
+        var result = await client.query("INSERT INTO dtl.promotions ( partner, ref, description, platform ) VALUES ( $1, $2, $3, $4 )", [request.payload.partner, request.payload.ref, request.payload.description, request.payload.platform || 'publisher']) 
         var row = (await client.query("SELECT * FROM dtl.promotions WHERE ref = $1", [request.params.ref])).rows[0]
         reply(row)
       } catch (e) {
@@ -57,7 +57,8 @@ exports.setup = (server, client, mongo) => {
         payload: {
           partner: Joi.string().required(),
           ref: Joi.string().required(),
-          description: Joi.string().required()
+          description: Joi.string().required(),
+          platform: Joi.string().required()
         }
       }
     }
