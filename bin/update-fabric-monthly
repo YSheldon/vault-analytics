@@ -71,7 +71,8 @@ var usageRecords = function (days, platform, version, channel) {
         ymd: row[0],
         platform: platform,
         version: version,
-        channel: channel
+        channel: channel,
+        ref: 'none'
       },
       count: row[1]
     }

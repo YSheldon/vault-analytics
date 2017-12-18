@@ -39,6 +39,8 @@ var resourcesReady = function(asyncError, resources) {
       return result._id.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))
     })
 
+    console.log(require('fs').writeFileSync('results.txt', require('util').inspect(results, { depth: null, maxArrayLength: null })))
+
     // Build funcs to execute
     var funcs = _.map(results, function(row) {
       return model.usageUpserter(resources.pg, row)

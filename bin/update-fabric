@@ -106,7 +106,8 @@ var buildUsageRecords = function (days, platform, version, channel) {
         platform: platform,
         version: version,
         channel: channel,
-        first_time: ft
+        first_time: ft,
+        ref: 'none'
       },
       count: value
     }

@@ -36,15 +36,15 @@ if (args.ymd) {
 console.log(`Updating daily totals matching ${args.match} at ${ymd} from Fastly - ${jobName}`)
 
 const QUERY = `
-INSERT INTO dw.fc_fastly_usage (ymd, platform, version, channel, first_time, country_code, dma, total)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-ON CONFLICT (ymd, platform, version, first_time, channel, country_code, dma) DO UPDATE SET total = $8
+INSERT INTO dw.fc_fastly_usage (ymd, platform, version, channel, first_time, country_code, dma, ref, total)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (ymd, platform, version, first_time, channel, country_code, dma, ref) DO UPDATE SET total = $9
 `
 
 const QUERY_MONTH = `
-INSERT INTO dw.fc_fastly_calendar_month_usage (ymd, platform, version, channel, country_code, dma, total)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT (ymd, platform, version, channel, country_code, dma) DO UPDATE SET total = $7
+INSERT INTO dw.fc_fastly_calendar_month_usage (ymd, platform, version, channel, country_code, dma, ref, total)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT (ymd, platform, version, channel, country_code, dma, ref) DO UPDATE SET total = $8
 `
 
 // Set field to 'unknown' or default value if not truthy
@@ -72,6 +72,7 @@ var buildFastlyUsageUpserter = function (pg, ymd, record) {
       un(record.first),
       un(record.countryCode),
       un(record.dmaCode),
+      un(record.ref, 'none'),
       record.count
     ]
     pg.query(QUERY, params, cb)
@@ -89,6 +90,7 @@ var buildFastlyMonthUsageUpserter = function (pg, ymd, record) {
       un(record.channel, 'dev'),
       un(record.countryCode),
       un(record.dmaCode),
+      un(record.ref, 'none'),
       record.count
     ]
     pg.query(QUERY_MONTH, params, cb)
@@ -121,10 +123,10 @@ var resourcesReady = function(asyncError, resources) {
     })
 
     // Select monthly records
-    var monthlySummarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'countryCode', 'dmaCode'], { monthly: true })
+    var monthlySummarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'countryCode', 'dmaCode', 'ref'], { monthly: true })
 
     // Group the records by dimension list
-    var summarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'first', 'countryCode', 'dmaCode'], { daily: true })
+    var summarized = flp.groupedSummaryBy(records, ['platform', 'version', 'channel', 'first', 'countryCode', 'dmaCode', 'ref'], { daily: true })
 
     // Build array of function to insert / update DAU into Postgres
     var dayFuncs = _.map(summarized, function (record) {

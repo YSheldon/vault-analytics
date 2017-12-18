@@ -12,12 +12,12 @@ var jobName = path.basename(__filename)
 var runInfo = reporter.startup(jobName)
 
 const QUERY = `
-INSERT INTO dw.fc_usage_month ( ymd, platform, version, channel, total )
-  SELECT ymd, platform, version, channel, SUM(total) as ftotal
+INSERT INTO dw.fc_usage_month ( ymd, platform, version, channel, ref, total )
+  SELECT ymd, platform, version, channel, ref, SUM(total) as ftotal
   FROM dw.fc_fastly_calendar_month_usage FC
   WHERE platform = 'androidbrowser' and ymd >= $1
-  GROUP BY ymd, platform, version, channel
-  ON CONFLICT (ymd, platform, version, channel) DO UPDATE SET total = EXCLUDED.total
+  GROUP BY ymd, platform, version, channel, ref
+  ON CONFLICT (ymd, platform, version, channel, ref) DO UPDATE SET total = EXCLUDED.total
 `
 
 const date = process.env.DATE || '2017-05-01'
