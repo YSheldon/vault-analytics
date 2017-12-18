@@ -214,7 +214,7 @@ exports.dailyActiveAndroidUsersFullGrouped = (db, exceptions, cb) => {
           $ifNull: [ '$channel', 'dev' ]
         },
         ref: {
-          $ifNull: [ '$ref', 'dev' ]
+          $ifNull: [ '$ref', 'none' ]
         },
         ymd: {
           $ifNull: [ '$year_month_day', '2016-02-10']

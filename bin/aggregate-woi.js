@@ -8,6 +8,7 @@ const _ = require('underscore')
 const pg = require('pg')
 const mongoc = require('../dist/mongoc')
 const retriever = require('../dist/retriever')
+const util = require('util')
 
 const collections = ['usage', 'android_usage', 'ios_usage']
 
@@ -29,10 +30,13 @@ async function run (args) {
       for (j = 0; j < results.length; j++) {
         row = results[j]._id
         row.total = results[j].count
-        await db.query(QUERY, [row.ymd, row.platform, row.version, row.channel, row.woi, row.ref, row.total])
+        if (row.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))) {
+          await db.query(QUERY, [row.ymd, row.platform, row.version, row.channel, row.woi, row.ref, row.total])
+        } else {
+          console.log("Ignoring row because of version error " + util.inspect(row))
+        }
       }
     }
-
     console.log("Done")
     mg.close()
     db.end()
