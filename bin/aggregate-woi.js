@@ -4,10 +4,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const path = require('path')
 const _ = require('underscore')
 const pg = require('pg')
 const mongoc = require('../dist/mongoc')
 const retriever = require('../dist/retriever')
+const reporter = require('../dist/reporter')
 const util = require('util')
 
 const collections = ['usage', 'android_usage', 'ios_usage']
@@ -17,6 +19,9 @@ INSERT INTO dw.fc_retention_woi (ymd, platform, version, channel, woi, ref, tota
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (ymd, platform, version, channel, woi, ref) DO UPDATE SET total = EXCLUDED.total
 `
+
+var jobName = path.basename(__filename)
+var runInfo = reporter.startup(jobName)
 
 async function run (args) {
   var i, j, results, row
@@ -37,7 +42,7 @@ async function run (args) {
         }
       }
     }
-    console.log("Done")
+    await reporter.complete(runInfo, db)
     mg.close()
     db.end()
   } catch (e) {

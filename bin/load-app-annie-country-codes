@@ -5,34 +5,38 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /*
-
   Replace the complete set of country codes and names for AppAnnie
-
  */
 
-const async = require('async')
-
 const appannie = require('../dist/appannie')
-const pgc = require('../dist/pgc')
+const reporter = require('../dist/reporter')
 
-const buildCountryInserter = function (pg, country) {
-  return function (cb) {
-    console.log(country)
-    pg.query('INSERT INTO appannie.dm_countries (code, name ) VALUES ($1, $2) ON CONFLICT (code) DO UPDATE SET name = excluded.name', [country.country_code, country.country_name], cb)
+const pg = require('pg')
+const path = require('path')
+
+const DATABASE_URL = process.env.DATABASE_URL || require('../dist/common').nope('DATABASE_URL required')
+
+const jobName = path.basename(__filename)
+const runInfo = reporter.startup(jobName)
+
+const QUERY = 'INSERT INTO appannie.dm_countries (code, name) VALUES ($1, $2) ON CONFLICT (code) DO UPDATE SET name = excluded.name'
+
+async function main () {
+  var i, db, country
+  try {
+    db = await pg.connect(process.env.DATABASE_URL)
+    appannie.countryCodes(require('request'), async (countries) => {
+      for (i = 0; i < countries.length; i++) {
+        country = countries[i]
+        await db.query(QUERY, [country.country_code, country.country_name])
+      }
+      await reporter.complete(runInfo, db)
+      db.end()
+    })
+  } catch (e) {
+    console.log(e)
+    process.exit(1)
   }
 }
 
-pgc.setup(function(err, pg) {
-  if (err) {
-    throw new Error(err)
-  }
-  appannie.countryCodes(require('request'), function(countries) {
-    var funcs = countries.map(function (country) {
-      return buildCountryInserter(pg, country);
-    })
-    async.series(funcs, function (asyncErr, results) {
-      console.log('Country code / names load complete')
-      pg.end()
-    })
-  })
-})
+main()

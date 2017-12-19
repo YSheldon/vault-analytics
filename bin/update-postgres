@@ -17,6 +17,7 @@ var pgc = require('../dist/pgc')
 
 var jobName = path.basename(__filename)
 var runInfo = reporter.startup(jobName)
+console.log(runInfo)
 
 console.log('Update daily totals for laptop - ' + jobName)
 
