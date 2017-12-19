@@ -9,6 +9,7 @@ var firstRun = function (rows, b) {
   table.empty()
   _.each(desktop, function (row) {
     var buf = '<tr>'
+    buf = buf + b.td(`<img src="/local/img/platform-icons/${row.platform}.png" height="18">`)
     buf = buf + b.td(row.platform, 'left')
     buf = buf + b.td(b.st(row.count), 'right')
     buf = buf + b.td(numeral(row.count / sumOfDesktop).format('0.0%'), 'right')
@@ -16,13 +17,14 @@ var firstRun = function (rows, b) {
     buf = buf + "</tr>"
     table.append(buf)
   })
-  table.append(b.tr([b.td(), b.td(b.b(b.st(sumOfDesktop)), 'right'), b.td(b.b(numeral(sumOfDesktop / sumOfAll).format('0.0%')), 'right'), b.td()]))
+  table.append(b.tr([b.td(), b.td(), b.td(b.b(b.st(sumOfDesktop)), 'right'), b.td(b.b(numeral(sumOfDesktop / sumOfAll).format('0.0%')), 'right'), b.td()]))
 
   var sumOfMobile = _.reduce(mobile, function (memo, row) { return memo + row.count }, 0)
   table = $("#overview-first-run-table-mobile tbody")
   table.empty()
   _.each(mobile, function (row) {
     var buf = '<tr>'
+    buf = buf + b.td(`<img src="/local/img/platform-icons/${row.platform}.png" height="18">`)
     buf = buf + b.td(row.platform, 'left')
     buf = buf + b.td(st(row.count), 'right')
     buf = buf + b.td(numeral(row.count / sumOfDesktop).format('0.0%'), 'right')
@@ -30,8 +32,8 @@ var firstRun = function (rows, b) {
     buf = buf + "</tr>"
     table.append(buf)
   })
-  table.append(b.tr([b.td(), b.td(b.b(b.st(sumOfMobile)), 'right'), b.td(b.b(numeral(sumOfMobile / sumOfAll).format('0.0%')), 'right'), b.td()]))
-  table.append(b.tr([b.td(), b.td(b.b(b.st(sumOfAll)), 'right'), b.td(), b.td()]))
+  table.append(b.tr([b.td(), b.td(), b.td(b.b(b.st(sumOfMobile)), 'right'), b.td(b.b(numeral(sumOfMobile / sumOfAll).format('0.0%')), 'right'), b.td()]))
+  table.append(b.tr([b.td(), b.td(), b.td(b.b(b.st(sumOfAll)), 'right'), b.td(), b.td()]))
 }
 
 
