@@ -5,36 +5,37 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /*
-
   Update the iOS country downloads and upgrades totals since inception
-
  */
-
-const async = require('async')
+const path = require('path')
+const pg = require('pg')
 
 const appannie = require('../dist/appannie')
-const pgc = require('../dist/pgc')
+const reporter = require('../dist/reporter')
 
-const buildCountryInfoUpserter = function (pg, country) {
-  return function (cb) {
-    pg.query("INSERT INTO appannie.fc_inception_by_country ( country_code, downloads, upgrades ) VALUES ( $1, $2, $3 ) ON CONFLICT (country_code) DO UPDATE SET downloads = $2, upgrades = $3", [country.country, country.downloads, country.updates], cb)
+const DATABASE_URL = process.env.DATABASE_URL || require('../dist/common').nope('DATABASE_URL required')
+
+const jobName = path.basename(__filename)
+const runInfo = reporter.startup(jobName)
+
+const QUERY = 'INSERT INTO appannie.fc_inception_by_country ( country_code, downloads, upgrades ) VALUES ( $1, $2, $3 ) ON CONFLICT (country_code) DO UPDATE SET downloads = $2, upgrades = $3'
+
+async function main () {
+  var i, db, country
+  try {
+    db = await pg.connect(DATABASE_URL)
+    appannie.downloadsByCountry(require('request'), async function(countries) {
+      for (i = 0; i < countries.length; i++) {
+        country = countries[i]
+        await db.query(QUERY, [country.country, country.downloads, country.updates])
+      }
+      await reporter.complete(runInfo, db)
+      db.end()
+    })
+  } catch (e) {
+    console.log("error: " + e)
+    process.exit(1)
   }
 }
 
-pgc.setup(function(err, pg) {
-  if (err) {
-    throw new Error(err)
-  }
-  appannie.downloadsByCountry(require('request'), function(countries) {
-    var funcs = countries.map(function (country) {
-      return buildCountryInfoUpserter(pg, country)
-    })
-    async.series(funcs, function (asyncErr, results) {
-      if (asyncErr) {
-        throw new Error(asyncErr)
-      }
-      console.log('AppAnnie iOS downloads / upgrades updated')
-      pg.end()
-    })
-  })
-})
+main()
