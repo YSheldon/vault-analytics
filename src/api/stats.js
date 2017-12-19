@@ -250,27 +250,7 @@ GROUP BY FC.ymd, FC.platform
 ORDER BY FC.ymd DESC, FC.platform
 `
 
-// We are using an number of different data sources in this query - hence the UNION
-const DAU_PLATFORM_FIRST_SUMMARY = `
-SELECT SM.platform, SM.count, PL.mobile, PL.vendor FROM (
-SELECT
-  sp.platform_mapping(FC.platform) AS platform,
-  SUM(FC.total) AS count
-FROM dw.fc_usage FC
-WHERE
-  FC.ymd >= GREATEST(current_date - CAST($1 as INTERVAL), '2016-01-26'::date) AND
-  first_time AND
-  ( sp.platform_mapping(FC.platform) <> 'ios' AND sp.platform_mapping(FC.platform) <> 'android' AND sp.platform_mapping(FC.platform) <> 'androidbrowser' )
-GROUP BY sp.platform_mapping(FC.platform)
-  UNION
-SELECT 'ios' AS platform, (SELECT SUM(downloads) FROM appannie.fc_inception_by_country) AS count
-  UNION
-SELECT 'android' AS platform, (SELECT SUM(downloads) FROM appannie.fc_android_inception_by_country) AS count
-  UNION
-  SELECT 'androidbrowser' AS platform, (SELECT SUM(total) FROM dw.fc_usage WHERE platform = 'androidbrowser' AND first_time) AS count
-) SM JOIN dw.dm_platform PL ON SM.platform = PL.platform
-ORDER BY PL.mobile, PL.vendor
-`
+const DAU_PLATFORM_FIRST_SUMMARY = `SELECT * FROM dw.fc_platform_downloads_summary_mv ORDER BY mobile, vendor`
 
 const PLATFORM_SUMMARY_GEO = `
 SELECT 'ios' AS platform, FC.country_code, DM.name, '000' AS dma, FC.downloads
@@ -531,18 +511,11 @@ exports.setup = (server, client, mongo) => {
   server.route({
     method: 'GET',
     path: '/api/1/dau_platform_first_summary',
-    handler: function (request, reply) {
-      // default to all time
-      let days = parseInt(request.query.days || 10000, 10) + ' days'
-      client.query(DAU_PLATFORM_FIRST_SUMMARY, [days], (err, results) => {
-        if (err) {
-          reply(err.toString()).code(500)
-        } else {
-          results.rows.forEach((row) => common.formatPGRow(row))
-          results.rows.forEach((row) => common.convertPlatformLabels(row))
-          reply(results.rows)
-        }
-      })
+    handler: async function (request, reply) {
+      let results = await client.query(DAU_PLATFORM_FIRST_SUMMARY, [])
+      results.rows.forEach((row) => common.formatPGRow(row))
+      results.rows.forEach((row) => common.convertPlatformLabels(row))
+      reply(results.rows)
     }
   })
 

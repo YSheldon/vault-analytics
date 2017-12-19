@@ -16,7 +16,8 @@ var mvs = {
   ],
   stats: [  
     "dw.fc_average_monthly_usage_mv",
-    "dw.fc_usage_platform_mv"
+    "dw.fc_usage_platform_mv",
+    "dw.fc_platform_downloads_summary_mv"
   ]
 }
 

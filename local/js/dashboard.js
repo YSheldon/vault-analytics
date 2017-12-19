@@ -919,6 +919,9 @@ var crashesVersionRetriever = function() {
 
 // Retrieve overview stats and dispatch UI build
 var overviewRetriever = async function () {
+  var downloads = await $.ajax('/api/1/dau_platform_first_summary')
+  window.OVERVIEW.firstRun(downloads, builders)
+
   var platformStats = await $.ajax('/api/1/monthly_average_stats_platform')
   window.OVERVIEW.monthAveragesHandler(platformStats, builders)
 
@@ -931,9 +934,6 @@ var overviewRetriever = async function () {
   var btc = await $.ajax('/api/1/ledger_overview')
   var bat = await $.ajax('/api/1/bat/ledger_overview')
   window.OVERVIEW.ledger(btc, bat, builders)
-
-  var downloads = await $.ajax('/api/1/dau_platform_first_summary')
-  window.OVERVIEW.firstRun(downloads, builders)
 }
 
 var eyeshadeRetriever = function() {
