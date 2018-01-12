@@ -24,7 +24,7 @@ exports.usageMonthlyUpserter = function (client, row) {
 
 exports.usageiOSMonthlyUpserter = function (client, row) {
   return function (cb) {
-    client.query('INSERT INTO dw.fc_ios_usage_month (ymd, platform, version, channel, woi, ref, total) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (ymd, platform, version, channel, woi, ref) DO UPDATE SET total = $7', [row._id.ymd, row._id.platform, row._id.version, row._id.channel, row._id.woi, row._id.ref, row.count], (err, result) => {
+    client.query('INSERT INTO dw.fc_usage_month (ymd, platform, version, channel, ref, total) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (ymd, platform, version, channel, ref) DO UPDATE SET total = $6', [row._id.ymd, row._id.platform, row._id.version, row._id.channel, row._id.ref, row.count], (err, result) => {
       cb(err)
     })
   }

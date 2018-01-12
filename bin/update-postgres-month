@@ -46,8 +46,6 @@ var resourcesReady = function(asyncError, resources) {
       throw new Error(err)
     }
 
-    console.log("Updating " + results.length + " rows")
-
     // disambiguate between Link Bubble and tabbed browser
     if (args.collection === 'android_usage') {
       results.forEach(function (result) {
@@ -64,6 +62,16 @@ var resourcesReady = function(asyncError, resources) {
     results = results.filter(function (result) {
       return result._id.version.match(new RegExp("^\\d+\\.\\d+\\.\\d+$"))
     })
+
+    // filter out duplicate ios entries
+    if (args.collection === 'ios_usage') {
+      console.log("limiting ios records to ones on or after 2018-01-01")
+      results = results.filter(function (results) {
+        return results._id.ymd >= '2018-01-01';
+      })
+    }
+
+    console.log("Updating " + results.length + " rows")
 
     // Build funcs to execute
     var funcs = _.map(results, function(row) {
