@@ -37,7 +37,7 @@
     "hapi-set-header": "^1.0.0",
     "inert": "^3.2.0",
     "joi": "^7.0.1",
-    "jquery": "^2.2.0",
+    "jquery": "^2.2.4",
     "kerberos": "0.0.17",
     "logfmt": "^1.2.0",
     "minidump": "brave/node-minidump",
