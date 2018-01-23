@@ -49,7 +49,6 @@ var resourcesReady = async function (asyncError, resources) {
     console.log("Inserting or updating publishers")
     for (i = 0; i < publishers.length; i++) {
       publisher = publishers[i]
-      console.log(publisher)
       if (publisher.publisher.match(/^youtube\#/)) {
         var [channel, identifier] = publisher.publisher.split('#')[1].split(':')
         publisher.url = `https://youtube.com/${channel}/${identifier}` 
