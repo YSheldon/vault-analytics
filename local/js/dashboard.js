@@ -866,7 +866,7 @@ var recentCrashesRetriever = function() {
         var buf = '<tr class="' + rowClass + '">'
         buf = buf + '<td><a href="#crash/' + crash.id + '">' + crash.id + '</a></td>'
         buf = buf + '<td nowrap>' + crash.ymd + '<br/><span class="ago">' + crash.ago + '</span></td>'
-        buf = buf + '<td>' + crash.version + '<br/><span class="ago">' + crash.electron_version + '</span></td>'
+        buf = buf + '<td>' + crash.version + ' (' + crash.channel + ')<br/><span class="ago">' + crash.electron_version + '</span></td>'
         buf = buf + '<td>' + crash.canonical_platform + '</td>'
         buf = buf + '<td>' + crash.platform + ' ' + crash.cpu + '<br/><span class="ago">' + crash.operating_system_name + '</span></td>'
         buf = buf + '<td>' + crash.crash_reason + '<br/>' + crash.signature + '</td>'

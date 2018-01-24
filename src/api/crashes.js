@@ -97,6 +97,7 @@ SELECT
   COALESCE(contents->>'ver', '0.0.0')                                        AS electron_version,
   contents->>'_version'                                                      AS version,
   contents->>'platform'                                                      AS platform,
+  contents->>'channel'                                                       AS channel,
   COALESCE(contents->'metadata'->>'cpu', 'Unknown')                          AS cpu,
   COALESCE(contents->>'node_env', 'Unknown')                                 AS node_env,
   COALESCE(contents->'metadata'->>'crash_reason', 'Unknown')                 AS crash_reason,
@@ -107,7 +108,8 @@ FROM dtl.crashes
 WHERE
   sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL) AND
   sp.canonical_platform(contents->>'platform', contents->'metadata'->>'cpu') = ANY ($2) AND
-  COALESCE(contents->>'_version', '0.0.0') <> '0.0.0'
+  COALESCE(contents->>'_version', '0.0.0') <> '0.0.0' AND
+  COALESCE(contents->>'channel', '') <> ''
 ORDER BY ts DESC
 LIMIT 100
 `
