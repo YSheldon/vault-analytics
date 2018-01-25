@@ -130,8 +130,9 @@ SELECT
 FROM dtl.crashes
 WHERE
   sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL) AND
-  sp.canonical_platform(contents->>'platform', contents->'metadata'->>'cpu') = ANY ($2) AND
-  COALESCE(contents->>'node_env', 'Unknown') = 'development'
+  ( COALESCE(contents->>'channel', 'none') <> 'dev' OR
+    COALESCE(contents->>'_version', '0.0.0') = '0.0.0' OR
+    contents->>'_version' NOT LIKE '[0-9]+\.[0-9]+\.[0-9]+')
 ORDER BY ts DESC
 LIMIT 200
 `
@@ -364,7 +365,7 @@ exports.setup = (server, client, mongo) => {
       client,
       DEVELOPMENT_CRASH_REPORT_DETAILS,
       commonSuccessHandler,
-      commonDaysPlatformParamsBuilder
+      (request) => { return [parseInt(request.query.days || 7) + ' days'] }
     )
   })
 

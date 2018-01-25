@@ -110,6 +110,7 @@ export function buildQueryReponseHandler (client, query, successHandler, paramsB
     const params = paramsBuilder(request)
     client.query(query, params, (err, results) => {
       if (err) {
+        console.log(err)
         reply(err.toString()).code(500)
       } else {
         successHandler(reply, results, request)
