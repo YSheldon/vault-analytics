@@ -333,8 +333,9 @@ exports.setup = (server, client, mongo) => {
       let days = parseInt(request.query.days || 7, 10)
       days += ' days'
       let platforms = common.platformPostgresArray(request.query.platformFilter)
-      client.query(RECENT_CRASH_REPORT_DETAILS, [days, platforms], (err, results) => {
+      client.query(RECENT_CRASH_REPORT_DETAILS, [days], (err, results) => {
         if (err) {
+          console.log(err)
           reply(err.toString()).code(500)
         } else {
           results.rows.forEach((row) => common.formatPGRow(row))
