@@ -107,7 +107,6 @@ SELECT
 FROM dtl.crashes
 WHERE
   sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL) AND
-  sp.canonical_platform(contents->>'platform', contents->'metadata'->>'cpu') = ANY ($2) AND
   COALESCE(contents->>'_version', '0.0.0') <> '0.0.0' AND
   COALESCE(contents->>'channel', '') <> ''
 ORDER BY ts DESC
