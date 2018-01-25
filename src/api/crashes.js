@@ -132,7 +132,7 @@ WHERE
   sp.to_ymd((contents->>'year_month_day'::text)) >= current_date - CAST($1 as INTERVAL) AND
   ( COALESCE(contents->>'channel', 'none') <> 'dev' OR
     COALESCE(contents->>'_version', '0.0.0') = '0.0.0' OR
-    contents->>'_version' NOT LIKE '[0-9]+\.[0-9]+\.[0-9]+')
+    contents->>'_version' not similar to '\\d+\\.\\d+\\.\\d+')
 ORDER BY ts DESC
 LIMIT 200
 `
@@ -364,7 +364,10 @@ exports.setup = (server, client, mongo) => {
     handler: common.buildQueryReponseHandler(
       client,
       DEVELOPMENT_CRASH_REPORT_DETAILS,
-      commonSuccessHandler,
+      (reply, results, request) => {
+        results.rows.forEach((row) => common.formatPGRow(row))
+        reply(results.rows)
+      },
       (request) => { return [parseInt(request.query.days || 7) + ' days'] }
     )
   })
