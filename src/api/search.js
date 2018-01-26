@@ -20,7 +20,7 @@ FROM dtl.crashes CR where id in ( select object_id from (
 FROM dtl.fti
   WHERE searchable @@ tsquery($1::text)
 ORDER BY rank DESC
-) S ) order by contents->'year_month_day' DESC
+) S ) order by contents->'ts' DESC
 LIMIT 100
 `
 

@@ -1721,26 +1721,24 @@ var searchInputHandler = function (e) {
     table.empty()
     return
   }
-  $("#searchComments").html("Loading...")
+  $("#searchComments").show()
+  $("#searchComments").html('Searching: ' + q)
   $.ajax('/api/1/search?query=' + encodeURIComponent(q), {
     success: function (results) {
       table.empty()
-      if (results.rowCount === 0) {
-        $("#searchComments").hide()
-      } else {
-        $("#searchComments").show()
-      }
+      $("#searchComments").show()
       if (results.rowCount > results.limit) {
         $("#searchComments").html("Showing " + results.limit + ' of ' + results.rowCount + ' crashes')
       } else {
-        $("#searchComments").html("Showing " + results.rowCount + ' crashes')
+        if (results.rowCount === 0) {
+          $("#searchComments").html("No crashes found")
+        } else {
+          $("#searchComments").html("Showing " + results.rowCount + ' crashes')
+        }
       }
       var crashes = results.crashes
       _.each(crashes, function (crash, idx) {
         var rowClass = ""
-        if (crash.contents.node_env == 'development') {
-          rowClass = 'warning'
-        }
         table.append(tr([
           td(idx + 1),
           td('<a href="#crash/' + crash.id + '">' + crash.id + '</a>'),
