@@ -1741,7 +1741,7 @@ var searchInputHandler = function (e) {
         var rowClass = ""
         table.append(tr([
           td(idx + 1),
-          td('<a href="#crash/' + crash.id + '">' + crash.id + '</a>'),
+          td('<a href="#crash/' + crash.id + '">' + crash.id + '</a><br>(' + crash.contents.crash_id + ')'),
           td(crash.contents.ver),
           td(crash.contents._version),
           td(crash.contents.year_month_day),
