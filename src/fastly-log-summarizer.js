@@ -10,14 +10,17 @@ const S3_LOG_BUCKET = process.env.S3_LOG_BUCKET || 'brave-logs-production'
 const S3_LOG_REGION = process.env.S3_LOG_REGION || 'us-east-1'
 const S3_UPDATES_KEY = process.env.S3_UPDATES_KEY || 'laptop-updates'
 
-if (!process.env.S3_CRASH_KEY || !process.env.S3_CRASH_SECRET) {
-  throw new Error('S3_CRASH_KEY and S3_CRASH_SECRET should be set to the S3 account credentials for storing crash reports')
+if (process.env.S3_CRASH_KEY) {
+  process.env.AWS_ACCESS_KEY_ID = process.env.S3_CRASH_KEY
+}
+if (process.env.S3_CRASH_SECRET) {
+  process.env.AWS_SECRET_ACCESS_KEY = process.env.S3_CRASH_SECRET
 }
 
 // AWS configuration
 AWS.config.update({
-  accessKeyId: process.env.S3_CRASH_KEY,
-  secretAccessKey: process.env.S3_CRASH_SECRET,
+  // NOTE the AWS SDK will automatically read credentials from AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+  // or the instance IAM role if running on AWS EC2
   region: S3_LOG_REGION,
   sslEnabled: true
 })
@@ -53,7 +56,7 @@ export function recordsForPrefix (prefix, match, done) {
       s3.getObject(params, function (err, data) {
         if (!err) {
           console.log(percent + '% - Downloading and Parsing ' + k)
-          allRecords += "\n" + filterExtensionLines(data.Body.toString())
+          allRecords += '\n' + filterExtensionLines(data.Body.toString())
         }
         cb(err, data)
       })
@@ -67,7 +70,7 @@ export function recordsForPrefix (prefix, match, done) {
 
   // Retrieve list of log files, parse them and return records as
   // an array of objects
-  s3.listObjects(params, function(err, data) {
+  s3.listObjects(params, function (err, data) {
     if (err) {
       console.log(err, err.stack)
       done(err, null)

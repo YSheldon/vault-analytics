@@ -8,14 +8,17 @@ var _ = require('underscore')
 const S3_CRASH_BUCKET = process.env.S3_CRASH_BUCKET || 'brave-laptop-crash-reports'
 const S3_CRASH_REGION = process.env.S3_CRASH_REGION || 'us-west-2'
 
-if (!process.env.S3_CRASH_KEY || !process.env.S3_CRASH_SECRET) {
-  throw new Error('S3_CRASH_KEY and S3_CRASH_SECRET should be set to the S3 account credentials for storing crash reports')
+if (process.env.S3_CRASH_KEY) {
+  process.env.AWS_ACCESS_KEY_ID = process.env.S3_CRASH_KEY
+}
+if (process.env.S3_CRASH_SECRET) {
+  process.env.AWS_SECRET_ACCESS_KEY = process.env.S3_CRASH_SECRET
 }
 
 // AWS configuration
 AWS.config.update({
-  accessKeyId: process.env.S3_CRASH_KEY,
-  secretAccessKey: process.env.S3_CRASH_SECRET,
+  // NOTE the AWS SDK will automatically read credentials from AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+  // or the instance IAM role if running on AWS EC2
   region: S3_CRASH_REGION,
   sslEnabled: true
 })
@@ -41,7 +44,7 @@ exports.metadataFromMachineCrash = (crash) => {
   var sig = 'unknown'
   if (crashTokens[3]) {
     var threadLines = (lines.filter((line) => {
-      return line.match(new RegExp("^" + crashTokens[3]))
+      return line.match(new RegExp('^' + crashTokens[3]))
     }) || []).map((line) => {
       return line.split('|')
     })
@@ -123,17 +126,17 @@ exports.readAndParse = (id, cb) => {
 
   console.log('Reading dump file from bucket ' + S3_CRASH_BUCKET + ' with id ' + id)
 
-  s3.getObject(params).
-    on('httpData', function(chunk) { file.write(chunk) }).
-    on('httpDone', function() {
+  s3.getObject(params)
+    .on('httpData', function (chunk) { file.write(chunk) })
+    .on('httpDone', function () {
       exports.parseCrashHandler(filename, cb)
-    }).
-    on('error', function(err) {
-      console.log("Error retrieving crash report from S3")
+    })
+    .on('error', function (err) {
+      console.log('Error retrieving crash report from S3')
       throw new Error(err)
       cb(err)
-    }).
-    send()
+    })
+    .send()
 }
 
 // Write symbolized crash report to the S3 crash bucket
@@ -142,7 +145,7 @@ exports.writeParsedCrashToS3 = (id, symbolizedCrashReport, cb) => {
   console.log(`[${id}] symbolized crash report writing to ${S3_CRASH_BUCKET} as ${k} with length ${symbolizedCrashReport.length}`)
   if (symbolizedCrashReport.length === 0) {
     console.log(`[${id}] contains an invalid crash report - storing 'Invalid crash report'`)
-    symbolizedCrashReport = "Invalid crash report"
+    symbolizedCrashReport = 'Invalid crash report'
   }
   var s3obj = new AWS.S3({
     params: {
@@ -150,7 +153,7 @@ exports.writeParsedCrashToS3 = (id, symbolizedCrashReport, cb) => {
       Key: k
     }
   })
-  s3obj.upload( { Body: symbolizedCrashReport } ).send(cb)
+  s3obj.upload({ Body: symbolizedCrashReport }).send(cb)
 }
 
 // Retrieve a binary minidump file from S3
@@ -165,15 +168,15 @@ exports.readAndStore = (id, cb) => {
 
   console.log('Reading dump file from bucket ' + S3_CRASH_BUCKET + ' with id ' + id)
 
-  s3.getObject(params).
-    on('httpData', function(chunk) { file.write(chunk) }).
-    on('httpDone', function() { cb(filename) }).
-    on('error', function(err) {
-      console.log("Error retrieving crash report from S3")
+  s3.getObject(params)
+    .on('httpData', function (chunk) { file.write(chunk) })
+    .on('httpDone', function () { cb(filename) })
+    .on('error', function (err) {
+      console.log('Error retrieving crash report from S3')
       throw new Error(err)
       cb(err)
-    }).
-    send()
+    })
+    .send()
 }
 
 export function readSymbolized (id, cb) {
@@ -182,8 +185,8 @@ export function readSymbolized (id, cb) {
     Bucket: S3_CRASH_BUCKET,
     Key: id + '.symbolized.txt'
   }
-  var done = function(err, data) {
-    var crashReport = ""
+  var done = function (err, data) {
+    var crashReport = ''
     if (err) {
       crashReport = 'Unavailable'
     } else {
