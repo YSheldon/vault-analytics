@@ -61,7 +61,7 @@ let kickoff = (err, connections) => {
   _.each([stats, jobs, crashes, search, eyeshade, bat_eyeshade, publishers, meta, telemetry], (api) => { api.setup(server, connections.pg, connections.mg) })
 
   // Setup the UI for the dashboard
-  ui.setup(server)
+  ui.setup(server, connections.pg)
   slack.setup(server, config)
 
   server.start((err) => {

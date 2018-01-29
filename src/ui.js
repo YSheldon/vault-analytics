@@ -1,5 +1,6 @@
 const path = require('path')
 const UUID = require('uuid-js')
+const _ = require('underscore')
 
 var shouldCache = true
 if (process.env.LOCAL) {
@@ -7,7 +8,7 @@ if (process.env.LOCAL) {
 }
 
 // Setup authentication and user interface components
-exports.setup = (server) => {
+exports.setup = (server, db) => {
   // The ADMIN_PASSWORD environment variable must be set
   if (!process.env.ADMIN_PASSWORD) {
     throw new Error('ADMIN_PASSWORD not set')
@@ -72,7 +73,9 @@ exports.setup = (server) => {
 
     const uuid4 = UUID.create()
     const sid = String(uuid4.toString())
-    request.server.app.cache.set(sid, { account: account }, 0, (err) => {
+    const accountToStore = _.clone(account)
+    delete accountToStore.password
+    request.server.app.cache.set(sid, { account: accountToStore }, 0, (err) => {
       if (err) {
         reply(err)
       }
@@ -95,10 +98,7 @@ exports.setup = (server) => {
       throw new Error(err)
     }
 
-    const cache = server.cache({
-      segment: 'sessions',
-      expiresIn: 3 * 24 * 60 * 60 * 1000
-    })
+    let cache = require('./catbox-pg').setup(server, { db })
     server.app.cache = cache
 
     // For local development set LOCAL to true
