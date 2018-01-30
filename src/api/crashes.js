@@ -36,8 +36,7 @@ SELECT
   SUM(total) AS total
 FROM dw.fc_crashes_mv
 WHERE
-  ymd >= current_date - cast($1 AS interval) AND
-  sp.canonical_platform(platform, cpu) = ANY ($2)
+  ymd >= current_date - cast($1 AS interval)
 GROUP BY
   version,
   platform,
@@ -257,7 +256,7 @@ exports.setup = (server, client, mongo) => {
       days += ' days'
       let platforms = common.platformPostgresArray(request.query.platformFilter)
       let channels = common.channelPostgresArray(request.query.channelFilter)
-      client.query(CRASH_REPORTS_SIGNATURE, [days, platforms], (err, results) => {
+      client.query(CRASH_REPORTS_SIGNATURE, [days], (err, results) => {
         if (err) {
           console.log(err)
           reply(err.toString()).code(500)
