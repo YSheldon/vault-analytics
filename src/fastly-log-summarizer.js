@@ -53,7 +53,7 @@ export function recordsForPrefix (prefix, match, done) {
       s3.getObject(params, function (err, data) {
         if (!err) {
           console.log(percent + '% - Downloading and Parsing ' + k)
-          allRecords += "\n" + filterExtensionLines(data.Body.toString())
+          allRecords.push(filterExtensionLines(data.Body.toString()).split(/\n/))
         }
         cb(err, data)
       })

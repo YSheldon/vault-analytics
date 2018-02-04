@@ -129,7 +129,7 @@ export const parseContents = (contents, match) => {
   if (match === 'android' || match === 'ios') {
     parser = parseMobileLine
   }
-  return contents.split(/\n/)
+  return _.flatten(contents)
     .filter((line) => { return line.length })
     .filter((line) => { return line.indexOf(match) !== -1 })
     .map((line) => { return parser(line) })
