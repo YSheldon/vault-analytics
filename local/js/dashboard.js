@@ -1782,6 +1782,8 @@ async function loadInitialData () {
   publisherPlatformsByPlatform = _.object(publisherPlatforms.map((platform) => { return [platform.platform, platform] }))
   installPromotionsPopoverHandler()
   $("#clearRef").hide()
+
+  await window.REFERRAL.referralSummaryStatsRetriever()
 }
 
 loadInitialData()

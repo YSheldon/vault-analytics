@@ -22,6 +22,7 @@ let bat_eyeshade = require('./api/bat_eyeshade')
 let publishers = require('./api/publishers')
 let meta = require('./api/meta')
 let telemetry = require('./api/telemetry')
+let referral = require('./api/referral')
 
 let setGlobalHeader = require('hapi-set-header')
 
@@ -58,7 +59,7 @@ let kickoff = (err, connections) => {
   })
 
   // Setup the APIs
-  _.each([stats, jobs, crashes, search, eyeshade, bat_eyeshade, publishers, meta, telemetry], (api) => { api.setup(server, connections.pg, connections.mg) })
+  _.each([stats, jobs, crashes, search, eyeshade, bat_eyeshade, publishers, meta, telemetry, referral], (api) => { api.setup(server, connections.pg, connections.mg) })
 
   // Setup the UI for the dashboard
   ui.setup(server, connections.pg)

@@ -4,6 +4,7 @@
 
 const _ = require('underscore')
 const moment = require('moment')
+const r = require('request')
 
 const allPlatforms = ['osx', 'winx64', 'winia32', 'ios', 'android', 'unknown', 'linux', 'darwin', 'androidbrowser']
 exports.allPlatforms = allPlatforms
@@ -125,3 +126,11 @@ export function convertPlatformLabels (row) {
   return row
 }
 
+export function prequest (url) {
+  return new Promise((resolve, reject) => {
+    r(url, (err, results, body) => {
+      if (err) return reject(err)
+      else return resolve(body)
+    })
+  })
+}
