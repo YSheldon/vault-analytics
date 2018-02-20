@@ -51,7 +51,7 @@ var resourcesReady = async function (asyncError, resources) {
       publisher = publishers[i]
       if (publisher.publisher.match(/^youtube\#/)) {
         var [channel, identifier] = publisher.publisher.split('#')[1].split(':')
-        publisher.url = `https://youtube.com/${channel}/${identifier}` 
+        publisher.url = `https://youtube.com/${channel}/${identifier}`
         publisher.platform = 'youtube'
       } else {
         publisher.url = `https://${publisher.publisher}`
@@ -59,6 +59,7 @@ var resourcesReady = async function (asyncError, resources) {
       }
       await resources.pg.query(INSERT_PUBLISHER, [publisher.publisher, publisher.name, publisher.url, publisher.created, publisher.created_at, publisher.verified, publisher.authorized, publisher.platform, publisher.provider])
     }
+    console.log(`Insert or updated ${publishers.length} publisher records`)
     var funcs = ymdRows.map((row) => {
       return (cb) => {
         resources.pg.query(QUERY, [row.ymd, row.total || 0, row.verified, row.authorized, row.irs], cb)

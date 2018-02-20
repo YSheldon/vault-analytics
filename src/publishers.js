@@ -83,8 +83,11 @@ export function all (url, done) {
 
   var token = process.env.EYESHADE_TOKEN || common.nope('EYESHADE_TOKEN required')
   var options = {
-    uri: url + "/v2/reports/publishers/status?format=json&summary=true&access_token=" + token,
-    method: 'GET'
+    uri: url + "/v2/reports/publishers/status?format=json&summary=true",
+    method: 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + token
+    }
   }
   if (agent) options.agent = agent
   request(options, function (err, response, body) {
